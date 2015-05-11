@@ -20,8 +20,8 @@ NodeJS client for Pivotal GemFire
 Note that for the time being, if you want to be able to use the precompiled binary, you'll need to set `NODE_TLS_REJECT_UNAUTHORIZED=0` when running `npm install`. Otherwise, `npm install` will fallback to compiling from source, which may only work on certain platforms.
 
 ```
-$ cd /my/node/vagrant
-$ NODE_TLS_REJECT_UNAUTHORIZED=0 npm install --save pivotal/node-gemfire
+$ cd /my/node/project
+$ NODE_TLS_REJECT_UNAUTHORIZED=0 npm install --save gemfire
 ```
 
 ### Configuring the GemFire client
