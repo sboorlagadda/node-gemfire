@@ -1,5 +1,6 @@
 Node GemFire
 ====================
+[![Build Status](https://travis-ci.org/gemfire/node-gemfire.svg)](https://travis-ci.org/gemfire/node-gemfire)
 
 NodeJS client for Pivotal GemFire
 
