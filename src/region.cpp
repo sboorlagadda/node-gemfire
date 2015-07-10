@@ -430,20 +430,21 @@ NAN_METHOD(Region::GetAllSync) {
 NAN_METHOD(Region::CreateSubRegion) {
   NanScope();
 
-  // if (args.Length() != 2) {
-  //   NanThrowError("You must pass the name of a GemFire subregion and region attributes to createSubRegion.");
+  if (args.Length() != 2) {
+    NanThrowError("You must pass the name of a GemFire subregion and region attributes to createSubRegion.");
     NanReturnUndefined();
-  // }
-  //
-  // if (!args[0]->IsString()) {
-  //   NanThrowError("You must pass a string as the name of a GemFire subregion to createSubRegion.");
-  //   NanReturnUndefined();
-  // }
-  // if (!args[1]->IsArray()) {
-  //   NanThrowError("You must pass an array as the GemFire subregion attributes to createSubRegion.");
-  //   NanReturnUndefined();
-  // }
-  //
+  }
+
+  if (!args[0]->IsString()) {
+    NanThrowError("You must pass a string as the name of a GemFire subregion to createSubRegion.");
+    NanReturnUndefined();
+  }
+  if (!args[1]->IsArray()) {
+    NanThrowError("You must pass an array as the GemFire subregion attributes to createSubRegion.");
+    NanReturnUndefined();
+  }
+  NanReturnUndefined();
+  
   // Region * region = ObjectWrap::Unwrap<Region>(args.This());
   // RegionPtr regionPtr(region->regionPtr);
   // RegionPtr subRegionPtr(regionPtr->createSubRegion(*NanAsciiString(args[0]), NULL));
