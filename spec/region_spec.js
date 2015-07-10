@@ -102,8 +102,8 @@ describe("gemfire.Region", function() {
       }
 
       expect(callWithZeroArguments).toThrow(new Error("You must pass the name of a GemFire subregion and region attributes to createSubRegion."));
-      expect(callWithOneArguments).toThrow(new Error("You must pass the name of a GemFire subregion and region attributes to createSubRegion."));
-      expect(callWithTwoArgument).not.toThrow();
+      expect(callWithOneArgument).toThrow(new Error("You must pass the name of a GemFire subregion and region attributes to createSubRegion."));
+      expect(callWithTwoArguments).not.toThrow();
       expect(callWithThreeArguments).toThrow(new Error("You must pass the name of a GemFire subregion and region attributes to createSubRegion."));
     });
 
