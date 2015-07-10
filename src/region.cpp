@@ -461,7 +461,7 @@ NAN_METHOD(Region::CreateSubRegion) {
 
   // NanThrowError(poolName->str());
 
-  RegionPtr subRegionPtr(regionPtr->createSubregion(*NanAsciiString(args[0]), regionAttributesPtr));
+  RegionPtr subRegionPtr(regionPtr->createSubregion(*NanAsciiString(args[0]), &regionAttributesPtr));
 
   NanReturnValue(Region::New(args.This(), subRegionPtr));
 }
