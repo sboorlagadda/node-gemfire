@@ -85,50 +85,50 @@ describe("gemfire.Region", function() {
     });
   });
 
-  describe(".createSubRegion", function() {
-
-    it("validates arguments", function(){
-      function callWithZeroArguments(){
-        region.createSubRegion();
-      }
-      function callWithOneArgument(){
-        region.createSubRegion("exampleSubRegion");
-      }
-      function callWithTwoArguments(){
-        region.createSubRegion("exampleSubRegion", {type: "LOCAL"});
-      }
-      function callWithThreeArguments(){
-        region.createSubRegion("exampleSubRegion", {type: "LOCAL"}, 1);
-      }
-
-      expect(callWithZeroArguments).toThrow(new Error("You must pass the name of a GemFire subregion and region attributes to createSubRegion."));
-      expect(callWithOneArgument).toThrow(new Error("You must pass the name of a GemFire subregion and region attributes to createSubRegion."));
-      expect(callWithTwoArguments).not.toThrow();
-      expect(callWithThreeArguments).toThrow(new Error("You must pass the name of a GemFire subregion and region attributes to createSubRegion."));
-    });
-
-    it("returns a gemfire.Region object", function() {
-      var subregion = region.createSubRegion("exampleSubRegion", {type: "LOCAL"});
-      expect(subregion.constructor.name).toEqual("Region");
-      expect(subregion).toNotEqual(region);
-    });
-
-    it("throws an error when a non-string name is passed in", function() {
-      function createSubRegionWithNonStringArguments(){
-        region.createSubRegion({}, {type: "LOCAL"});
-      }
-      function createSubRegionWithNonArrayArguments(){
-        region.createSubRegion("something", []);
-      }
-
-      expect(createSubRegionWithNonStringArguments).toThrow(
-        new Error("You must pass a string as the name of a GemFire subregion to createSubRegion.")
-      );
-      expect(createSubRegionWithNonArrayArguments).toThrow(
-        new Error("You must pass a configuration object as the GemFire subregion attributes to createSubRegion.")
-      );
-    });
-  });
+  // describe(".createSubRegion", function() {
+  //
+  //   it("validates arguments", function(){
+  //     function callWithZeroArguments(){
+  //       region.createSubRegion();
+  //     }
+  //     function callWithOneArgument(){
+  //       region.createSubRegion("exampleSubRegion");
+  //     }
+  //     function callWithTwoArguments(){
+  //       region.createSubRegion("exampleSubRegion", {type: "LOCAL"});
+  //     }
+  //     function callWithThreeArguments(){
+  //       region.createSubRegion("exampleSubRegion", {type: "LOCAL"}, 1);
+  //     }
+  //
+  //     expect(callWithZeroArguments).toThrow(new Error("You must pass the name of a GemFire subregion and region attributes to createSubRegion."));
+  //     expect(callWithOneArgument).toThrow(new Error("You must pass the name of a GemFire subregion and region attributes to createSubRegion."));
+  //     expect(callWithTwoArguments).not.toThrow();
+  //     expect(callWithThreeArguments).toThrow(new Error("You must pass the name of a GemFire subregion and region attributes to createSubRegion."));
+  //   });
+  //
+  //   it("returns a gemfire.Region object", function() {
+  //     var subregion = region.createSubRegion("exampleSubRegion", {type: "LOCAL"});
+  //     expect(subregion.constructor.name).toEqual("Region");
+  //     expect(subregion).toNotEqual(region);
+  //   });
+  //
+  //   it("throws an error when a non-string name is passed in", function() {
+  //     function createSubRegionWithNonStringArguments(){
+  //       region.createSubRegion({}, {type: "LOCAL"});
+  //     }
+  //     function createSubRegionWithNonArrayArguments(){
+  //       region.createSubRegion("something", []);
+  //     }
+  //
+  //     expect(createSubRegionWithNonStringArguments).toThrow(
+  //       new Error("You must pass a string as the name of a GemFire subregion to createSubRegion.")
+  //     );
+  //     expect(createSubRegionWithNonArrayArguments).toThrow(
+  //       new Error("You must pass a configuration object as the GemFire subregion attributes to createSubRegion.")
+  //     );
+  //   });
+  // });
 
   describe(".getSubRegion", function() {
 
@@ -149,7 +149,7 @@ describe("gemfire.Region", function() {
     });
 
     it("returns a gemfire.Region object", function() {
-      region.createSubRegion("exampleSubRegion", {type: "LOCAL"});
+      // region.createSubRegion("exampleSubRegion", {type: "LOCAL"});
 
       var subregion = region.getSubRegion("exampleSubRegion");
       expect(subregion.constructor.name).toEqual("Region");
@@ -157,7 +157,7 @@ describe("gemfire.Region", function() {
     });
 
     it("returns undefined if the subregion is unknown", function(){
-      region.createSubRegion("exampleSubRegion", {type: "LOCAL"});
+      // region.createSubRegion("exampleSubRegion", {type: "LOCAL"});
 
       expect(region.getSubRegion("there is no such region")).toBeUndefined();
     });

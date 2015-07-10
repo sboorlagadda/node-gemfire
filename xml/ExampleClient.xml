@@ -11,6 +11,8 @@
 
   <region name="exampleRegion" refid="CACHING_PROXY">
     <region-attributes pool-name="myPool"/>
+    <region name="exampleSubRegion" refid="CACHING_PROXY">
+    </region>
   </region>
 
   <region name="exampleProxyRegion" refid="PROXY">

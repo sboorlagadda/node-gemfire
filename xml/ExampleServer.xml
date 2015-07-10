@@ -6,7 +6,10 @@
 <cache>
   <cache-server port="40404"/>
   <pdx read-serialized="true" />
-  <region name="exampleRegion" refid="REPLICATE"/>
+  <region name="exampleRegion" refid="REPLICATE">
+    <region name="exampleSubRegion" refid="REPLICATE"/>
+  </region>
+
   <region name="exampleProxyRegion" refid="REPLICATE"/>
   <region name="anotherRegion" refid="REPLICATE"/>
   <region name="shadow" refid="REPLICATE"/>
