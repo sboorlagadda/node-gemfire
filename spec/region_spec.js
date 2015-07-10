@@ -115,7 +115,7 @@ describe("gemfire.Region", function() {
 
     it("throws an error when a non-string name is passed in", function() {
       function createSubRegionWithNonStringArguments(){
-        region.createSubRegion({});
+        region.createSubRegion({}, []);
       }
       function createSubRegionWithNonArrayArguments(){
         region.createSubRegion("something", {});
@@ -149,7 +149,7 @@ describe("gemfire.Region", function() {
     });
 
     it("returns a gemfire.Region object", function() {
-      region.createSubRegion("exampleSubRegion");
+      region.createSubRegion("exampleSubRegion", []);
 
       var subregion = region.getSubRegion("exampleSubRegion");
       expect(subregion.constructor.name).toEqual("Region");
@@ -157,7 +157,7 @@ describe("gemfire.Region", function() {
     });
 
     it("returns undefined if the subregion is unknown", function(){
-      region.createSubRegion("exampleSubRegion");
+      region.createSubRegion("exampleSubRegion", []);
 
       expect(region.getSubRegion("there is no such region")).toBeUndefined();
     });
