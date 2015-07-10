@@ -85,6 +85,51 @@ describe("gemfire.Region", function() {
     });
   });
 
+  describe(".createSubRegion", function() {
+
+    it("validates arguments", function(){
+      function callWithZeroArguments(){
+        region.createSubRegion();
+      }
+      function callWithOneArgument(){
+        region.createSubRegion("exampleSubRegion");
+      }
+      function callWithTwoArguments(){
+        region.createSubRegion("exampleSubRegion", []);
+      }
+      function callWithThreeArguments(){
+        region.createSubRegion("exampleSubRegion", [], 1);
+      }
+
+      expect(callWithZeroArguments).toThrow(new Error("You must pass the name of a GemFire subregion and region attributes to createSubRegion."));
+      expect(callWithOneArguments).toThrow(new Error("You must pass the name of a GemFire subregion and region attributes to createSubRegion."));
+      expect(callWithTwoArgument).not.toThrow();
+      expect(callWithThreeArguments).toThrow(new Error("You must pass the name of a GemFire subregion and region attributes to createSubRegion."));
+    });
+
+    it("returns a gemfire.Region object", function() {
+      var subregion = region.createSubRegion("exampleSubRegion", []);
+      expect(subregion.constructor.name).toEqual("Region");
+      expect(subregion).toNotEqual(region);
+    });
+
+    it("throws an error when a non-string name is passed in", function() {
+      function createSubRegionWithNonStringArguments(){
+        region.createSubRegion({});
+      }
+      function createSubRegionWithNonArrayArguments(){
+        region.createSubRegion("something", {});
+      }
+
+      expect(createSubRegionWithNonStringArguments).toThrow(
+        new Error("You must pass a string as the name of a GemFire subregion to createSubRegion.")
+      );
+      expect(createSubRegionWithNonStringArguments).toThrow(
+        new Error("You must pass an array as the GemFire subregion attributes to createSubRegion.")
+      );
+    });
+  });
+
   describe(".getSubRegion", function() {
 
     it("validates arguments", function(){
@@ -118,11 +163,11 @@ describe("gemfire.Region", function() {
     });
 
     it("throws an error when a non-string name is passed in", function() {
-      function getRegionWithNonStringArguments(){
+      function getSubRegionWithNonStringArguments(){
         region.getSubRegion({});
       }
 
-      expect(getRegionWithNonStringArguments).toThrow(
+      expect(getSubRegionWithNonStringArguments).toThrow(
         new Error("You must pass a string as the name of a GemFire subregion to getSubRegion.")
       );
     });

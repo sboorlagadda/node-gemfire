@@ -427,6 +427,30 @@ NAN_METHOD(Region::GetAllSync) {
   NanReturnValue(v8Value(resultsPtr));
 }
 
+NAN_METHOD(Region::CreateSubRegion) {
+  NanScope();
+
+  // if (args.Length() != 2) {
+  //   NanThrowError("You must pass the name of a GemFire subregion and region attributes to createSubRegion.");
+    NanReturnUndefined();
+  // }
+  //
+  // if (!args[0]->IsString()) {
+  //   NanThrowError("You must pass a string as the name of a GemFire subregion to createSubRegion.");
+  //   NanReturnUndefined();
+  // }
+  // if (!args[1]->IsArray()) {
+  //   NanThrowError("You must pass an array as the GemFire subregion attributes to createSubRegion.");
+  //   NanReturnUndefined();
+  // }
+  //
+  // Region * region = ObjectWrap::Unwrap<Region>(args.This());
+  // RegionPtr regionPtr(region->regionPtr);
+  // RegionPtr subRegionPtr(regionPtr->createSubRegion(*NanAsciiString(args[0]), NULL));
+  //
+  // NanReturnValue(Region::New(args.This(), subRegionPtr));
+}
+
 NAN_METHOD(Region::GetSubRegion) {
   NanScope();
 
@@ -1091,6 +1115,9 @@ void Region::Init(Local<Object> exports) {
 
   NanSetPrototypeTemplate(constructorTemplate, "clear",
       NanNew<FunctionTemplate>(Region::Clear)->GetFunction());
+  NanSetPrototypeTemplate(constructorTemplate, "createSubRegion",
+      NanNew<FunctionTemplate>(Region::CreateSubRegion)->GetFunction());
+
   NanSetPrototypeTemplate(constructorTemplate, "put",
       NanNew<FunctionTemplate>(Region::Put)->GetFunction());
   NanSetPrototypeTemplate(constructorTemplate, "putSync",
