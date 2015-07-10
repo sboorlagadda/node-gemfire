@@ -436,7 +436,7 @@ NAN_METHOD(Region::GetSubRegion) {
   }
 
   if (!args[0]->IsString()) {
-    NanThrowError("something");
+    NanThrowError("You must pass a valid string name of a GemFire subregion.");
     NanReturnUndefined();
   }
 
