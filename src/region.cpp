@@ -440,9 +440,9 @@ NAN_METHOD(Region::GetSubRegion) {
     NanReturnUndefined();
   }
 
-  // Cache * cache = ObjectWrap::Unwrap<Cache>(args.This());
-  // CachePtr cachePtr(cache->cachePtr);
-  // RegionPtr regionPtr(cachePtr->getRegion(*NanAsciiString(args[0])));
+  Region * region = ObjectWrap::Unwrap<Region>(args.This());
+  RegionPtr regionPtr(region->regionPtr);
+  RegionPtr subRegionPtr(regionPtr->getSubRegion(*NanAsciiString(args[0])));
 
   // NanReturnValue(Region::New(args.This(), regionPtr));
   NanReturnUndefined();
