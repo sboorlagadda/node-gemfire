@@ -441,7 +441,9 @@ NAN_METHOD(Region::CreateSubRegion) {
   }
 
   if (!args[1]->IsObject()) {
-    NanThrowError("You must pass a configuration object as the GemFire subregion attributes to createSubRegion.");
+    NanThrowError(
+      "You must pass a configuration object as the GemFire subregion attributes to createSubRegion."
+    );
     NanReturnUndefined();
   }
   Local<Object> regionConfiguration(args[1]->ToObject());
