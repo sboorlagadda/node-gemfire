@@ -439,14 +439,22 @@ NAN_METHOD(Region::CreateSubRegion) {
     NanThrowError("You must pass a string as the name of a GemFire subregion to createSubRegion.");
     NanReturnUndefined();
   }
-  if (!args[1]->IsArray()) {
-    NanThrowError("You must pass an array as the GemFire subregion attributes to createSubRegion.");
+
+  if (!args[1]->IsObject()) {
+    NanThrowError("You must pass a configuration object as the GemFire subregion attributes to createSubRegion.");
     NanReturnUndefined();
   }
+  Local<Object> regionConfiguration(args[1]->ToObject());
+
+  // Local<Value> regionType(regionConfiguration->Get(NanNew("type")));
+  // if (regionType->IsUndefined()) {
+  //   NanThrowError("createSubRegion: The region configuration object must have a type property.");
+  //   NanReturnUndefined();
+  // }
 
   Region * region = ObjectWrap::Unwrap<Region>(args.This());
   RegionPtr regionPtr(region->regionPtr);
-  RegionPtr subRegionPtr(regionPtr->createSubregion(*NanAsciiString(args[0]), NULL));
+  RegionPtr subRegionPtr(regionPtr->createSubregion(*NanAsciiString(args[0]), NULLPTR));
 
   NanReturnValue(Region::New(args.This(), subRegionPtr));
 }
