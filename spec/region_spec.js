@@ -86,6 +86,7 @@ describe("gemfire.Region", function() {
   });
 
   describe(".getSubRegion", function() {
+
     it("validates arguments", function(){
       function callWithZeroArguments(){
         region.getSubRegion();
@@ -103,12 +104,16 @@ describe("gemfire.Region", function() {
     });
 
     it("returns a gemfire.Region object", function() {
+      region.createSubRegion("exampleSubRegion");
+
       var subregion = region.getSubRegion("exampleSubRegion");
       expect(subregion.constructor.name).toEqual("Region");
       expect(subregion).toNotEqual(region);
     });
 
     it("returns undefined if the subregion is unknown", function(){
+      region.createSubRegion("exampleSubRegion");
+
       expect(region.getSubRegion("there is no such region")).toBeUndefined();
     });
 
