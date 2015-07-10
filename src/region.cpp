@@ -430,6 +430,21 @@ NAN_METHOD(Region::GetAllSync) {
 NAN_METHOD(Region::GetSubRegion) {
   NanScope();
 
+  if (args.Length() != 1) {
+    NanThrowError("You must pass the name of a GemFire subregion to getSubRegion.");
+    NanReturnUndefined();
+  }
+
+  if (!args[0]->IsString()) {
+    NanThrowError("something");
+    NanReturnUndefined();
+  }
+
+  // Cache * cache = ObjectWrap::Unwrap<Cache>(args.This());
+  // CachePtr cachePtr(cache->cachePtr);
+  // RegionPtr regionPtr(cachePtr->getRegion(*NanAsciiString(args[0])));
+
+  // NanReturnValue(Region::New(args.This(), regionPtr));
   NanReturnUndefined();
 }
 
