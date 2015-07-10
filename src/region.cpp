@@ -430,7 +430,7 @@ NAN_METHOD(Region::GetAllSync) {
 NAN_METHOD(Region::GetSubRegion) {
   NanScope();
 
-  
+  NanReturnUndefined();
 }
 
 class PutAllWorker : public GemfireEventedWorker {
