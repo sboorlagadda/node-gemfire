@@ -444,7 +444,7 @@ NAN_METHOD(Region::CreateSubRegion) {
     NanReturnUndefined();
   }
   NanReturnUndefined();
-  
+
   // Region * region = ObjectWrap::Unwrap<Region>(args.This());
   // RegionPtr regionPtr(region->regionPtr);
   // RegionPtr subRegionPtr(regionPtr->createSubRegion(*NanAsciiString(args[0]), NULL));

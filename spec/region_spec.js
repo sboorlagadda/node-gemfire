@@ -124,7 +124,7 @@ describe("gemfire.Region", function() {
       expect(createSubRegionWithNonStringArguments).toThrow(
         new Error("You must pass a string as the name of a GemFire subregion to createSubRegion.")
       );
-      expect(createSubRegionWithNonStringArguments).toThrow(
+      expect(createSubRegionWithNonArrayArguments).toThrow(
         new Error("You must pass an array as the GemFire subregion attributes to createSubRegion.")
       );
     });
