@@ -94,7 +94,7 @@ describe("gemfire.Region", function() {
         region.getSubRegion("exampleSubRegion");
       }
       function callWithTwoArguments(){
-        cache.getSubRegion("exampleSubRegion", "foo");
+        region.getSubRegion("exampleSubRegion", "foo");
       }
 
       expect(callWithZeroArguments).toThrow(new Error("You must pass the name of a GemFire subregion to getSubRegion."));
@@ -114,7 +114,7 @@ describe("gemfire.Region", function() {
 
     it("throws an error when a non-string name is passed in", function() {
       function getRegionWithNonStringArguments(){
-        cache.getSubRegion({});
+        region.getSubRegion({});
       }
 
       expect(getRegionWithNonStringArguments).toThrow(
