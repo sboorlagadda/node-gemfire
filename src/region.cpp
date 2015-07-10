@@ -457,8 +457,8 @@ NAN_METHOD(Region::CreateSubRegion) {
 
   AttributesFactory * attributesFactory = new AttributesFactory::AttributesFactory();
   const RegionAttributesPtr regionAttributesPtr(attributesFactory->createRegionAttributes());
-  
-  RegionPtr subRegionPtr(regionPtr->createSubregion(*NanAsciiString(args[0]), &regionAttributesPtr));
+
+  RegionPtr subRegionPtr(regionPtr->createSubregion(*NanAsciiString(args[0]), regionAttributesPtr));
 
   NanReturnValue(Region::New(args.This(), subRegionPtr));
 }
