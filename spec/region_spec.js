@@ -95,10 +95,10 @@ describe("gemfire.Region", function() {
         region.createSubRegion("exampleSubRegion");
       }
       function callWithTwoArguments(){
-        region.createSubRegion("exampleSubRegion", {});
+        region.createSubRegion("exampleSubRegion", {type: "LOCAL"});
       }
       function callWithThreeArguments(){
-        region.createSubRegion("exampleSubRegion", {}, 1);
+        region.createSubRegion("exampleSubRegion", {type: "LOCAL"}, 1);
       }
 
       expect(callWithZeroArguments).toThrow(new Error("You must pass the name of a GemFire subregion and region attributes to createSubRegion."));
@@ -108,14 +108,14 @@ describe("gemfire.Region", function() {
     });
 
     it("returns a gemfire.Region object", function() {
-      var subregion = region.createSubRegion("exampleSubRegion", []);
+      var subregion = region.createSubRegion("exampleSubRegion", {type: "LOCAL"});
       expect(subregion.constructor.name).toEqual("Region");
       expect(subregion).toNotEqual(region);
     });
 
     it("throws an error when a non-string name is passed in", function() {
       function createSubRegionWithNonStringArguments(){
-        region.createSubRegion({}, {});
+        region.createSubRegion({}, {type: "LOCAL"});
       }
       function createSubRegionWithNonArrayArguments(){
         region.createSubRegion("something", []);
@@ -149,7 +149,7 @@ describe("gemfire.Region", function() {
     });
 
     it("returns a gemfire.Region object", function() {
-      region.createSubRegion("exampleSubRegion", {});
+      region.createSubRegion("exampleSubRegion", {type: "LOCAL"});
 
       var subregion = region.getSubRegion("exampleSubRegion");
       expect(subregion.constructor.name).toEqual("Region");
@@ -157,7 +157,7 @@ describe("gemfire.Region", function() {
     });
 
     it("returns undefined if the subregion is unknown", function(){
-      region.createSubRegion("exampleSubRegion", {});
+      region.createSubRegion("exampleSubRegion", {type: "LOCAL"});
 
       expect(region.getSubRegion("there is no such region")).toBeUndefined();
     });
