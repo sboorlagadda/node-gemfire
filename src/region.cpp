@@ -444,8 +444,7 @@ NAN_METHOD(Region::GetSubRegion) {
   RegionPtr regionPtr(region->regionPtr);
   RegionPtr subRegionPtr(regionPtr->getSubregion(*NanAsciiString(args[0])));
 
-  // NanReturnValue(Region::New(args.This(), regionPtr));
-  NanReturnUndefined();
+  NanReturnValue(Region::New(args.This(), subRegionPtr));
 }
 
 class PutAllWorker : public GemfireEventedWorker {
