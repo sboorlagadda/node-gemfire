@@ -85,6 +85,44 @@ describe("gemfire.Region", function() {
     });
   });
 
+  describe(".getSubRegion", function() {
+    it("validates arguments", function(){
+      function callWithZeroArguments(){
+        region.getSubRegion();
+      }
+      function callWithOneArgument(){
+        region.getSubRegion("exampleSubRegion");
+      }
+      function callWithTwoArguments(){
+        cache.getSubRegion("exampleSubRegion", "foo");
+      }
+
+      expect(callWithZeroArguments).toThrow(new Error("You must pass the name of a GemFire subregion to getSubRegion."));
+      expect(callWithOneArgument).not.toThrow();
+      expect(callWithTwoArguments).toThrow(new Error("You must pass the name of a GemFire subregion to getSubRegion."));
+    });
+
+    it("returns a gemfire.Region object", function() {
+      var subregion = region.getSubRegion("exampleSubRegion");
+      expect(subregion.constructor.name).toEqual("Region");
+      expect(subregion).toNotEqual(region);
+    });
+
+    it("returns undefined if the subregion is unknown", function(){
+      expect(region.getSubRegion("there is no such region")).toBeUndefined();
+    });
+
+    it("throws an error when a non-string name is passed in", function() {
+      function getRegionWithNonStringArguments(){
+        cache.getSubRegion({});
+      }
+
+      expect(getRegionWithNonStringArguments).toThrow(
+        new Error("You must pass a string as the name of a GemFire subregion to getSubRegion.")
+      );
+    });
+  });
+
   describe(".getSync", function() {
     it("throws an error if a key is not passed to .getSync", function() {
       function getWithoutKey() {
