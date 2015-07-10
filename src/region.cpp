@@ -1089,6 +1089,8 @@ void Region::Init(Local<Object> exports) {
       NanNew<FunctionTemplate>(Region::GetAll)->GetFunction());
   NanSetPrototypeTemplate(constructorTemplate, "getAllSync",
       NanNew<FunctionTemplate>(Region::GetAllSync)->GetFunction());
+  NanSetPrototypeTemplate(constructorTemplate, "getSubRegion",
+      NanNew<FunctionTemplate>(Region::GetSubRegion)->GetFunction());
   NanSetPrototypeTemplate(constructorTemplate, "entries",
       NanNew<FunctionTemplate>(Region::Entries)->GetFunction());
   NanSetPrototypeTemplate(constructorTemplate, "putAll",
