@@ -132,15 +132,20 @@ describe("gemfire.Region", function() {
 
   describe(".getSubRegion", function() {
 
+    beforeEach(function(done) {
+      region = cache.getRegion("exampleLocalRegion");
+      region.clear(done);
+    });
+
     it("validates arguments", function(){
       function callWithZeroArguments(){
         region.getSubRegion();
       }
       function callWithOneArgument(){
-        region.getSubRegion("exampleSubRegion");
+        region.getSubRegion("exampleLocalSubRegion");
       }
       function callWithTwoArguments(){
-        region.getSubRegion("exampleSubRegion", "foo");
+        region.getSubRegion("exampleLocalSubRegion", "foo");
       }
 
       expect(callWithZeroArguments).toThrow(new Error("You must pass the name of a GemFire subregion to getSubRegion."));
@@ -151,7 +156,7 @@ describe("gemfire.Region", function() {
     it("returns a gemfire.Region object", function() {
       // region.createSubRegion("exampleSubRegion", {type: "LOCAL"});
 
-      var subregion = region.getSubRegion("exampleSubRegion");
+      var subregion = region.getSubRegion("exampleLocalSubRegion");
       expect(subregion.constructor.name).toEqual("Region");
       expect(subregion).toNotEqual(region);
     });
