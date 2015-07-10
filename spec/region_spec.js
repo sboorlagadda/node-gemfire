@@ -158,7 +158,7 @@ describe("gemfire.Region", function() {
 
       var subregion = region.getSubRegion("exampleLocalSubRegion");
       expect(subregion.constructor.name).toEqual("Region");
-      expect(subregion).toNotEqual(region);
+      expect(subregion).not.toEqual(region);
     });
 
     it("returns undefined if the subregion is unknown", function(){
