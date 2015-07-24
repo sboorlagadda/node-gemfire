@@ -9,6 +9,12 @@ NodeJS client for Pivotal GemFire
 * CentOS 6.5
 * Other 64-bit Linux platforms may work.
 
+## Tested node.js runtime versions
+
+* 0.12.7
+* 0.11.16
+* 0.10.40
+
 ## Installation
 
 ### Prerequisites
