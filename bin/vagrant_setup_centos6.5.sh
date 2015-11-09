@@ -33,6 +33,7 @@ yum -y install \
   sqlite-devel \
   unzip \
   valgrind \
+  wget \
   yum-utils \
   yum-plugin-auto-update-debug-info.noarch
 
@@ -91,7 +92,7 @@ export PATH=$GFCPP/bin:/usr/local/bin:$PATH
 export LD_LIBRARY_PATH=$GFCPP/lib:$LD_LIBRARY_PATH
 EOF
 
-wget --no-verbose https://google-styleguide.googlecode.com/svn/trunk/cpplint/cpplint.py -O /usr/local/bin/cpplint.py
+wget --no-verbose https://raw.githubusercontent.com/google/styleguide/gh-pages/cpplint/cpplint.py -O /usr/local/bin/cpplint.py
 chmod +x /usr/local/bin/cpplint.py
 
 if [ ! -e /vagrant/tmp/gppfs-0.2 ]; then
