@@ -8,7 +8,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # All Vagrant configuration is done here. The most common configuration
   # options are documented and commented below. For a complete reference,
   # please see the online documentation at vagrantup.com.
-  config.vm.box = "chef/centos-6.5"
+  config.vm.box = "bento/centos-6.7"
   config.vm.hostname = "node-gemfire-dev"
   config.vm.define "node-gemfire-dev"
 
