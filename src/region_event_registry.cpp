@@ -7,7 +7,7 @@
 #include "events.hpp"
 
 using namespace v8;
-using namespace gemfire;
+using namespace apache::geode::client;
 
 namespace node_gemfire {
 

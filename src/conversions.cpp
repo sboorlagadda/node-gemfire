@@ -1,8 +1,9 @@
 #include <node.h>
+#include <cstdint>
 #include <nan.h>
 #include <v8.h>
 #include <math.h>
-#include <gfcpp/GemfireCppCache.hpp>
+#include <geode/GeodeCppCache.hpp>
 #include <string>
 #include <sstream>
 #include <set>
@@ -10,8 +11,10 @@
 #include "exceptions.hpp"
 #include "select_results.hpp"
 
+using namespace std;
+using namespace chrono;
 using namespace v8;
-using namespace gemfire;
+using namespace apache::geode::client;
 
 namespace node_gemfire {
 
@@ -169,14 +172,14 @@ PdxInstancePtr gemfireValue(const Local<Object> & v8Object, const CachePtr & cac
 
     return pdxInstanceFactory->create();
   }
-  catch(const gemfire::Exception & exception) {
+  catch(const apache::geode::client::Exception & exception) {
     ThrowGemfireException(exception);
     return NULLPTR;
   }
 }
 
-gemfire::CacheableArrayListPtr gemfireValue(const Local<Array> & v8Array,
-                                         const gemfire::CachePtr & cachePtr) {
+apache::geode::client::CacheableArrayListPtr gemfireValue(const Local<Array> & v8Array,
+                                         const apache::geode::client::CachePtr & cachePtr) {
   CacheableArrayListPtr arrayListPtr(CacheableArrayList::create());
 
   unsigned int length = v8Array->Length();
@@ -187,14 +190,11 @@ gemfire::CacheableArrayListPtr gemfireValue(const Local<Array> & v8Array,
   return arrayListPtr;
 }
 
-gemfire::CacheableDatePtr gemfireValue(const Local<Date> & v8Date) {
-  uint64 millisecondsSinceEpoch = v8Date->NumberValue();
-
-  timeval timeSinceEpoch;
-  timeSinceEpoch.tv_sec = millisecondsSinceEpoch / 1000;
-  timeSinceEpoch.tv_usec = (millisecondsSinceEpoch % 1000) * 1000;
-
-  return CacheableDate::create(timeSinceEpoch);
+apache::geode::client::CacheableDatePtr gemfireValue(const Local<Date> & v8Date) {
+  long int millisecondsSinceEpoch = v8Date->NumberValue();
+  std::chrono::milliseconds dur(millisecondsSinceEpoch);
+  std::chrono::time_point<std::chrono::system_clock> dt(dur);
+  return CacheableDate::create(dt);
 }
 
 CacheableKeyPtr gemfireKey(const Local<Value> & v8Value, const CachePtr & cachePtr) {
@@ -273,39 +273,39 @@ Local<Value> v8Value(const CacheablePtr & valuePtr) {
 
   int typeId = valuePtr->typeId();
   switch (typeId) {
-    case GemfireTypeIds::CacheableASCIIString:
-    case GemfireTypeIds::CacheableASCIIStringHuge:
+    case GeodeTypeIds::CacheableASCIIString:
+    case GeodeTypeIds::CacheableASCIIStringHuge:
       return NanEscapeScope(NanNew((static_cast<CacheableStringPtr>(valuePtr))->asChar()));
-    case GemfireTypeIds::CacheableString:
-    case GemfireTypeIds::CacheableStringHuge:
+    case GeodeTypeIds::CacheableString:
+    case GeodeTypeIds::CacheableStringHuge:
       return NanEscapeScope(v8StringFromWstring((static_cast<CacheableStringPtr>(valuePtr))->asWChar()));
-    case GemfireTypeIds::CacheableBoolean:
+    case GeodeTypeIds::CacheableBoolean:
       return NanEscapeScope(NanNew((static_cast<CacheableBooleanPtr>(valuePtr))->value()));
-    case GemfireTypeIds::CacheableDouble:
+    case GeodeTypeIds::CacheableDouble:
       return NanEscapeScope(NanNew((static_cast<CacheableDoublePtr>(valuePtr))->value()));
-    case GemfireTypeIds::CacheableFloat:
+    case GeodeTypeIds::CacheableFloat:
       return NanEscapeScope(NanNew((static_cast<CacheableFloatPtr>(valuePtr))->value()));
-    case GemfireTypeIds::CacheableInt16:
+    case GeodeTypeIds::CacheableInt16:
       return NanEscapeScope(NanNew((static_cast<CacheableInt16Ptr>(valuePtr))->value()));
-    case GemfireTypeIds::CacheableInt32:
+    case GeodeTypeIds::CacheableInt32:
       return NanEscapeScope(NanNew((static_cast<CacheableInt32Ptr>(valuePtr))->value()));
-    case GemfireTypeIds::CacheableInt64:
+    case GeodeTypeIds::CacheableInt64:
       return NanEscapeScope(v8Value(static_cast<CacheableInt64Ptr>(valuePtr)));
-    case GemfireTypeIds::CacheableDate:
+    case GeodeTypeIds::CacheableDate:
       return NanEscapeScope(v8Value(static_cast<CacheableDatePtr>(valuePtr)));
-    case GemfireTypeIds::CacheableUndefined:
+    case GeodeTypeIds::CacheableUndefined:
       return NanEscapeScope(NanUndefined());
-    case GemfireTypeIds::Struct:
+    case GeodeTypeIds::Struct:
       return NanEscapeScope(v8Value(static_cast<StructPtr>(valuePtr)));
-    case GemfireTypeIds::CacheableObjectArray:
+    case GeodeTypeIds::CacheableObjectArray:
       return NanEscapeScope(v8Array(static_cast<CacheableObjectArrayPtr>(valuePtr)));
-    case GemfireTypeIds::CacheableArrayList:
+    case GeodeTypeIds::CacheableArrayList:
       return NanEscapeScope(v8Array(static_cast<CacheableArrayListPtr>(valuePtr)));
-    case GemfireTypeIds::CacheableVector:
+    case GeodeTypeIds::CacheableVector:
       return NanEscapeScope(v8Array(static_cast<CacheableVectorPtr>(valuePtr)));
-    case GemfireTypeIds::CacheableHashMap:
+    case GeodeTypeIds::CacheableHashMap:
       return NanEscapeScope(v8Object(static_cast<CacheableHashMapPtr>(valuePtr)));
-    case GemfireTypeIds::CacheableHashSet:
+    case GeodeTypeIds::CacheableHashSet:
       return NanEscapeScope(v8Array(static_cast<CacheableHashSetPtr>(valuePtr)));
     case 0:
       try {
@@ -319,7 +319,7 @@ Local<Value> v8Value(const CacheablePtr & valuePtr) {
       break;
   }
 
-  if (typeId > GemfireTypeIds::CacheableStringHuge) {
+  if (typeId > GeodeTypeIds::CacheableStringHuge) {
     // We are assuming these are Pdx
     return NanEscapeScope(v8Value(static_cast<PdxInstancePtr>(valuePtr)));
   }
@@ -348,7 +348,7 @@ Local<Value> v8Value(const PdxInstancePtr & pdxInstance) {
 
       CacheablePtr value;
 
-      if (pdxInstance->getFieldType(key) == gemfire::PdxFieldTypes::OBJECT_ARRAY) {
+      if (pdxInstance->getFieldType(key) == apache::geode::client::PdxFieldTypes::OBJECT_ARRAY) {
         CacheableObjectArrayPtr valueArray;
         pdxInstance->getField(key, valueArray);
         value = valueArray;
@@ -360,7 +360,7 @@ Local<Value> v8Value(const PdxInstancePtr & pdxInstance) {
 
     return NanEscapeScope(v8Object);
   }
-  catch(const gemfire::Exception & exception) {
+  catch(const apache::geode::client::Exception & exception) {
     ThrowGemfireException(exception);
     return NanEscapeScope(NanUndefined());
   }

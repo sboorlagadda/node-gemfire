@@ -2,14 +2,14 @@
 
 #include <v8.h>
 #include <nan.h>
-#include <gfcpp/CacheFactory.hpp>
+#include <geode/CacheFactory.hpp>
 #include "dependencies.hpp"
 #include "cache.hpp"
 #include "region.hpp"
 #include "select_results.hpp"
 
 using namespace v8;
-using namespace gemfire;
+using namespace apache::geode::client;
 
 namespace node_gemfire {
 
@@ -29,7 +29,7 @@ NAN_METHOD(Initialize) {
       static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
   gemfire->ForceSet(NanNew("gemfireVersion"),
-      NanNew(gemfire::CacheFactory::getVersion()),
+      NanNew(apache::geode::client::CacheFactory::getVersion()),
       static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
   gemfire->ForceSet(NanNew("connected"),

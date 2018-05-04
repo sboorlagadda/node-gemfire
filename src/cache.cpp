@@ -1,9 +1,9 @@
 #include "cache.hpp"
 #include <v8.h>
 #include <nan.h>
-#include <gfcpp/Cache.hpp>
-#include <gfcpp/CacheFactory.hpp>
-#include <gfcpp/Region.hpp>
+#include <geode/Cache.hpp>
+#include <geode/CacheFactory.hpp>
+#include <geode/Region.hpp>
 #include <string>
 #include <sstream>
 #include "exceptions.hpp"
@@ -15,7 +15,7 @@
 #include "region_shortcuts.hpp"
 
 using namespace v8;
-using namespace gemfire;
+using namespace apache::geode::client;
 
 namespace node_gemfire {
 
@@ -61,7 +61,7 @@ NAN_METHOD(Cache::New) {
   CachePtr cachePtr;
   try {
     cachePtr = cacheFactory->create();
-  } catch(const gemfire::Exception & exception) {
+  } catch(const apache::geode::client::Exception & exception) {
     ThrowGemfireException(exception);
     NanReturnUndefined();
   }
@@ -214,7 +214,7 @@ NAN_METHOD(Cache::ExecuteQuery) {
 
       queryServicePtr = cachePtr->getQueryService(poolName.c_str());
     }
-  } catch (const gemfire::Exception & exception) {
+  } catch (const apache::geode::client::Exception & exception) {
     ThrowGemfireException(exception);
     NanReturnUndefined();
   }
@@ -280,7 +280,7 @@ NAN_METHOD(Cache::CreateRegion) {
     }
 
     regionPtr = regionFactoryPtr->create(*NanUtf8String(args[0]));
-  } catch (const gemfire::Exception & exception) {
+  } catch (const apache::geode::client::Exception & exception) {
     ThrowGemfireException(exception);
     NanReturnUndefined();
   }
@@ -367,7 +367,7 @@ NAN_METHOD(Cache::ExecuteFunction) {
 
     ExecutionPtr executionPtr(FunctionService::onServer(poolPtr));
     NanReturnValue(executeFunction(args, cachePtr, executionPtr));
-  } catch (const gemfire::Exception & exception) {
+  } catch (const apache::geode::client::Exception & exception) {
     ThrowGemfireException(exception);
     NanReturnUndefined();
   }

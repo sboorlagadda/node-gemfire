@@ -1,7 +1,7 @@
 #include "region_shortcuts.hpp"
 #include <string>
 
-using namespace gemfire;
+using namespace apache::geode::client;
 
 namespace node_gemfire {
 

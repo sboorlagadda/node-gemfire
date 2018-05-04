@@ -69,7 +69,7 @@ module.exports = function itExecutesFunctions(subjectSource, expectFunctionsToTh
       subject.executeFunction("com.example.Nonexistent")
         .on('error', function(error) {
           expect(error).toBeError(
-            "gemfire::MessageException",
+            "apache::geode::client::MessageException",
             "Execute::GET_FUNCTION_ATTRIBUTES: message from server could not be handled"
           );
           done();
@@ -81,8 +81,8 @@ module.exports = function itExecutesFunctions(subjectSource, expectFunctionsToTh
         subject.executeFunction("io.pivotal.node_gemfire.TestFunctionException")
           .on('error', function(error) {
             expect(error).toBeError(
-              'gemfire::CacheServerException',
-              /com.gemstone.gemfire.cache.execute.FunctionException: Test exception message thrown by server./
+              'apache::geode::client::CacheServerException',
+              /org.apache.geode.cache.execute.FunctionException: Test exception message thrown by server./
             );
             done();
           });

@@ -1,10 +1,15 @@
+ext {
+    gemfireVersion = '9.4.0'
+}
+
 apply plugin: 'java'
 apply plugin: 'application'
 
 repositories {
     mavenCentral()
+    maven { url 'https://repo.spring.io/libs-release' }
 }
 
 dependencies {
-    compile files('lib/gemfire.jar')
+    compile "io.pivotal.gemfire:geode-core:$gemfireVersion"
 }

@@ -24,8 +24,16 @@ exports.expectExternalFailure = function expectExternalFailure(name, callback, m
   jasmine.addMatchers(errorMatchers);
 
   runExternalTest(name, function(error, stdout, stderr) {
-    expect(error).toBeError();
-    expect(stderr).toContain(message);
+    console.log("name " + name + "\n" + 
+                "error " + error+ "\n" + 
+                "stderr - " + stderr+ "\n" +   
+                "message - " + message + "\n" +
+                "callback - " + callback + "\n" +
+                "index of message -> " + stderr.indexOf(message));
+
+    expect(error).not.toBeNull();
+    expect(stderr.indexOf(message) >= 0).toBe(true);
+    console.log("message - " + message + " *******");
     callback(error, stdout, stderr);
   });
 };

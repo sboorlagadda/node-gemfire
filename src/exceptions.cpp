@@ -2,11 +2,11 @@
 #include <nan.h>
 
 using namespace v8;
-using namespace gemfire;
+using namespace apache::geode::client;
 
 namespace node_gemfire {
 
-Local<Value> v8Error(const gemfire::Exception & exception) {
+Local<Value> v8Error(const apache::geode::client::Exception & exception) {
   NanEscapableScope();
 
   Local<Object> error(NanError(exception.getMessage())->ToObject());
@@ -24,7 +24,7 @@ Local<Value> v8Error(const UserFunctionExecutionExceptionPtr & exceptionPtr) {
   return NanEscapeScope(error);
 }
 
-void ThrowGemfireException(const gemfire::Exception & e) {
+void ThrowGemfireException(const apache::geode::client::Exception & e) {
   NanThrowError(v8Error(e));
 }
 

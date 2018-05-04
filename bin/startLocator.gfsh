@@ -1,4 +1,5 @@
 start locator \
-  --bind-address=10.0.2.15 \
   --port=10334 \
-  --name=locator
+  --name=locator \
+  --enable-cluster-configuration=false
+

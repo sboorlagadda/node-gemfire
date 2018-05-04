@@ -1,5 +1,5 @@
 #include "region.hpp"
-#include <gfcpp/Region.hpp>
+#include <geode/Region.hpp>
 #include <uv.h>
 #include <sstream>
 #include <string>
@@ -14,7 +14,7 @@
 #include "dependencies.hpp"
 
 using namespace v8;
-using namespace gemfire;
+using namespace apache::geode::client;
 
 namespace node_gemfire {
 
@@ -87,8 +87,7 @@ class ClearWorker : public GemfireEventedWorker {
   void ExecuteGemfireWork() {
     // Workaround: We don't want to call clear on the region if the cache is closed.
     // After cache is cleared, getCache() will throw an exception, whereas clear() causes a segfault.
-    region->regionPtr->getCache();
-
+    region->regionPtr->getRegionService()->isClosed();
     region->regionPtr->clear();
   }
 
@@ -122,7 +121,8 @@ CachePtr getCacheFromRegion(RegionPtr regionPtr) {
   NanScope();
 
   try {
-    return regionPtr->getCache();
+    //TODO: need to fix this since it gets any instance and doesn't use the region.
+    return CacheFactory::getAnyInstance();
   } catch (const RegionDestroyedException & exception) {
     ThrowGemfireException(exception);
     return NULLPTR;
@@ -152,7 +152,7 @@ class PutWorker : public GemfireEventedWorker {
       SetError("InvalidValueError", "Invalid GemFire value.");
       return;
     }
-
+    
     region->regionPtr->put(keyPtr, valuePtr);
   }
 
@@ -578,7 +578,7 @@ NAN_METHOD(Region::ExecuteFunction) {
   try {
     ExecutionPtr executionPtr(FunctionService::onRegion(regionPtr));
     NanReturnValue(executeFunction(args, cachePtr, executionPtr));
-  } catch (const gemfire::Exception & exception) {
+  } catch (const apache::geode::client::Exception & exception) {
     ThrowGemfireException(exception);
     NanReturnUndefined();
   }
@@ -680,10 +680,11 @@ NAN_GETTER(Region::Attributes) {
       NanNew(regionAttributesPtr->getRegionTimeToLive()),
       static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
+  /*  TODO : Removeing scope since its not part of the API
   returnValue->ForceSet(NanNew("scope"),
       NanNew(ScopeType::fromOrdinal(regionAttributesPtr->getScope())),
       static_cast<PropertyAttribute>(ReadOnly | DontDelete));
-
+  */
   NanReturnValue(returnValue);
 }
 
@@ -887,7 +888,7 @@ NAN_METHOD(Region::RegisterAllKeys) {
   Region * region = ObjectWrap::Unwrap<Region>(args.This());
   try {
     region->regionPtr->registerAllKeys();
-  } catch (const gemfire::Exception & exception) {
+  } catch (const apache::geode::client::Exception & exception) {
     ThrowGemfireException(exception);
   }
 
@@ -900,7 +901,7 @@ NAN_METHOD(Region::UnregisterAllKeys) {
   Region * region = ObjectWrap::Unwrap<Region>(args.This());
   try {
     region->regionPtr->unregisterAllKeys();
-  } catch (const gemfire::Exception & exception) {
+  } catch (const apache::geode::client::Exception & exception) {
     ThrowGemfireException(exception);
   }
 

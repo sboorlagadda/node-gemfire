@@ -71,8 +71,12 @@ module.exports = function itDestroysTheRegion(methodName) {
     region[methodName](function (error) {
       expect(error).not.toBeError();
 
-      expect(function(){ region.put("foo", "bar"); }).toThrowNamedError(
-        "gemfire::RegionDestroyedException",
+      expect(function(){ 
+        console.log("*********************** before " + methodName);
+        region.put("foo", "bar"); 
+        console.log("*********************** after " + methodName);
+      }).toThrowNamedError(
+        "apache::geode::client::RegionDestroyedException",
         "LocalRegion::getCache: region /" + regionName + " destroyed"
       );
 
@@ -87,8 +91,8 @@ module.exports = function itDestroysTheRegion(methodName) {
       expect(function(){
         otherCopyOfRegion.put("foo", "bar");
       }).toThrowNamedError(
-        "gemfire::RegionDestroyedException",
-        "LocalRegion::getCache: region /" + regionName + " destroyed"
+        "apache::geode::client::RegionDestroyedException",
+        "Region::put: Named Region Destroyed"
       );
 
       done();
@@ -109,7 +113,7 @@ module.exports = function itDestroysTheRegion(methodName) {
       // destroying an already destroyed region causes an error
       region[methodName](function (error) {
         expect(error).toBeError(
-          "gemfire::RegionDestroyedException",
+          "apache::geode::client::RegionDestroyedException",
           "Region::" + methodName + ": Named Region Destroyed"
         );
 

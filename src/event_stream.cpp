@@ -5,7 +5,7 @@
 #include "conversions.hpp"
 
 using namespace v8;
-using namespace gemfire;
+using namespace apache::geode::client;
 
 namespace node_gemfire {
 
@@ -55,7 +55,7 @@ std::string EventStream::Event::getName() {
   return eventName;
 }
 
-gemfire::RegionPtr EventStream::Event::getRegion() {
+apache::geode::client::RegionPtr EventStream::Event::getRegion() {
   return entryEventPtr->getRegion();
 }
 

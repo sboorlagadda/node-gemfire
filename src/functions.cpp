@@ -1,5 +1,5 @@
 #include "functions.hpp"
-#include <gfcpp/FunctionService.hpp>
+#include <geode/FunctionService.hpp>
 #include <nan.h>
 #include <v8.h>
 #include <string>
@@ -11,7 +11,7 @@
 #include "streaming_result_collector.hpp"
 
 using namespace v8;
-using namespace gemfire;
+using namespace apache::geode::client;
 
 namespace node_gemfire {
 
@@ -77,7 +77,7 @@ class ExecuteFunctionWorker {
       executionPtr = executionPtr->withCollector(resultCollectorPtr);
 
       executionPtr->execute(functionName.c_str());
-    } catch (const gemfire::Exception & exception) {
+    } catch (const apache::geode::client::Exception & exception) {
       exceptionPtr = exception.clone();
     }
   }
@@ -139,7 +139,7 @@ class ExecuteFunctionWorker {
   CacheablePtr functionArguments;
   CacheableVectorPtr functionFilter;
   Persistent<Object> emitter;
-  gemfire::ExceptionPtr exceptionPtr;
+  apache::geode::client::ExceptionPtr exceptionPtr;
 
   bool ended;
   bool executeCompleted;
@@ -202,7 +202,7 @@ Local<Value> executeFunction(_NAN_METHOD_ARGS,
 
   if (synchronousFlag) {
     CacheableVectorPtr returnValue = CacheableVector::create();
-    gemfire::ExceptionPtr exceptionPtr;
+    apache::geode::client::ExceptionPtr exceptionPtr;
     ExecutionPtr synchronousExecutionPtr;
 
     try {
@@ -223,7 +223,7 @@ Local<Value> executeFunction(_NAN_METHOD_ARGS,
            ++iterator) {
         returnValue->push_back(*iterator);
       }
-    } catch (const gemfire::Exception & exception) {
+    } catch (const apache::geode::client::Exception & exception) {
       exceptionPtr = exception.clone();
     }
     if (returnValue->length() == 1) {

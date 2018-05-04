@@ -1,14 +1,14 @@
 #!/bin/bash
-GEMFIRE_SERVER_FILENAME="pivotal-gemfire-8.1*.el6.noarch.rpm"
-GEMFIRE_DIRECTORY="/opt/pivotal/gemfire/Pivotal_GemFire_81*"
+GEMFIRE_SERVER_FILENAME="pivotal-gemfire-9.4.0.zip"
+GEMFIRE_DIRECTORY="/opt/pivotal/gemfire/pivotal-gemfire-9.4.0"
 GEMFIRE_LINK_DIRECTORY="/opt/pivotal/gemfire/Pivotal_GemFire"
 
-NATIVE_CLIENT_FILENAME="Pivotal_GemFire_NativeClient_Linux_64bit_81*.zip"
-NATIVE_CLIENT_DIRECTORY="/opt/pivotal/gemfire/NativeClient_Linux_64bit_81*"
+NATIVE_CLIENT_FILENAME="pivotal-gemfire-native-9.2.0-build.10-Linux-64bit.tar.gz"
+NATIVE_CLIENT_DIRECTORY="/opt/pivotal/gemfire/pivotal-gemfire-native"
 NATIVE_LINK_DIRECTORY="/opt/pivotal/gemfire/NativeClient"
 
-JAVA_RPM_FILENAME="jdk-7u65-linux-x64.rpm"
-JAVA_RPM_URL="http://download.oracle.com/otn-pub/java/jdk/7u65-b17/$JAVA_RPM_FILENAME"
+JAVA_RPM_FILENAME="jdk-8u171-linux-x64.rpm"
+JAVA_RPM_URL="http://download.oracle.com/otn-pub/java/jdk/8u171-b11/512cd62ec5174c3487ac17c61aaa89e8/$JAVA_RPM_FILENAME"
 
 set -e
 
@@ -48,11 +48,11 @@ if [ ! -d $GEMFIRE_DIRECTORY ]; then
     echo "----------------------------------------------------"
     exit 1
   fi
-  rpm -ivh /vagrant/tmp/$GEMFIRE_SERVER_FILENAME
-fi
+  mkdir -p /opt/pivotal/gemfire > /dev/null 2>&1
 
-cp $GEMFIRE_DIRECTORY/lib/gemfire.jar /vagrant/tmp/gemfire.jar
-cp $GEMFIRE_DIRECTORY/lib/antlr.jar /vagrant/tmp/antlr.jar
+  cd /opt/pivotal/gemfire
+  unzip /vagrant/tmp/$GEMFIRE_SERVER_FILENAME
+fi
 
 if [ ! -e $NATIVE_CLIENT_DIRECTORY ]; then
   if [ ! -e /vagrant/tmp/$NATIVE_CLIENT_FILENAME ]; then
@@ -66,7 +66,7 @@ if [ ! -e $NATIVE_CLIENT_DIRECTORY ]; then
     exit 1
   fi
   cd /opt/pivotal/gemfire
-  unzip /vagrant/tmp/$NATIVE_CLIENT_FILENAME
+  tar zxvf /vagrant/tmp/$NATIVE_CLIENT_FILENAME
 fi
 
 if [ ! -e /usr/bin/javac ]; then
@@ -88,7 +88,7 @@ export GEMFIRE=$GEMFIRE_LINK_DIRECTORY
 EOF
 sh -c "cat >> /etc/profile.d/gfcpp.sh" <<'EOF'
 export JAVA_HOME=/usr/java/default
-export PATH=$GFCPP/bin:/usr/local/bin:$PATH
+export PATH=$GEMFIRE/bin:$GFCPP/bin:/usr/local/bin:$PATH
 export LD_LIBRARY_PATH=$GFCPP/lib:$LD_LIBRARY_PATH
 EOF
 

@@ -4,7 +4,7 @@
 #include <v8.h>
 #include <nan.h>
 #include <node.h>
-#include <gfcpp/Cache.hpp>
+#include <geode/Cache.hpp>
 
 namespace node_gemfire {
 
@@ -12,11 +12,11 @@ class Cache : public node::ObjectWrap {
  public:
   static void Init(v8::Local<v8::Object> exports);
 
-  gemfire::CachePtr cachePtr;
+  apache::geode::client::CachePtr cachePtr;
 
  protected:
   explicit Cache(
-      gemfire::CachePtr cachePtr) :
+      apache::geode::client::CachePtr cachePtr) :
     cachePtr(cachePtr) {}
 
   virtual ~Cache() {
@@ -35,7 +35,7 @@ class Cache : public node::ObjectWrap {
   static NAN_METHOD(Inspect);
 
  private:
-  static gemfire::PoolPtr getPool(const v8::Handle<v8::Value> & poolNameValue);
+  static apache::geode::client::PoolPtr getPool(const v8::Handle<v8::Value> & poolNameValue);
   v8::Local<v8::Function> exitCallback();
 };
 

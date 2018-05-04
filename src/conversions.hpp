@@ -3,47 +3,49 @@
 
 #include <v8.h>
 #include <nan.h>
-#include <gfcpp/PdxInstanceFactory.hpp>
-#include <gfcpp/CacheFactory.hpp>
+#include <geode/PdxInstanceFactory.hpp>
+#include <geode/CacheFactory.hpp>
 #include <string>
+#include <cstdint>
+#include <sys/time.h>
 
 namespace node_gemfire {
 
-gemfire::CacheablePtr gemfireValue(const v8::Local<v8::Value> & v8Value,
-                                         const gemfire::CachePtr & cachePtr);
-gemfire::PdxInstancePtr gemfireValue(const v8::Local<v8::Object> & v8Object,
-                                           const gemfire::CachePtr & cachePtr);
-gemfire::CacheableArrayListPtr gemfireValue(const v8::Local<v8::Array> & v8Value,
-                                         const gemfire::CachePtr & cachePtr);
-gemfire::CacheableDatePtr gemfireValue(const v8::Local<v8::Date> & v8Value);
+apache::geode::client::CacheablePtr gemfireValue(const v8::Local<v8::Value> & v8Value,
+                                         const apache::geode::client::CachePtr & cachePtr);
+apache::geode::client::PdxInstancePtr gemfireValue(const v8::Local<v8::Object> & v8Object,
+                                           const apache::geode::client::CachePtr & cachePtr);
+apache::geode::client::CacheableArrayListPtr gemfireValue(const v8::Local<v8::Array> & v8Value,
+                                         const apache::geode::client::CachePtr & cachePtr);
+apache::geode::client::CacheableDatePtr gemfireValue(const v8::Local<v8::Date> & v8Value);
 
-gemfire::CacheableKeyPtr gemfireKey(const v8::Local<v8::Value> & v8Value,
-                                          const gemfire::CachePtr & cachePtr);
-gemfire::VectorOfCacheableKeyPtr gemfireKeys(const v8::Local<v8::Array> & v8Value,
-                                          const gemfire::CachePtr & cachePtr);
+apache::geode::client::CacheableKeyPtr gemfireKey(const v8::Local<v8::Value> & v8Value,
+                                          const apache::geode::client::CachePtr & cachePtr);
+apache::geode::client::VectorOfCacheableKeyPtr gemfireKeys(const v8::Local<v8::Array> & v8Value,
+                                          const apache::geode::client::CachePtr & cachePtr);
 
-gemfire::HashMapOfCacheablePtr gemfireHashMap(const v8::Local<v8::Object> & v8Object,
-                                           const gemfire::CachePtr & cachePtr);
-gemfire::CacheableVectorPtr gemfireVector(const v8::Local<v8::Array> & v8Array,
-                                           const gemfire::CachePtr & cachePtr);
+apache::geode::client::HashMapOfCacheablePtr gemfireHashMap(const v8::Local<v8::Object> & v8Object,
+                                           const apache::geode::client::CachePtr & cachePtr);
+apache::geode::client::CacheableVectorPtr gemfireVector(const v8::Local<v8::Array> & v8Array,
+                                           const apache::geode::client::CachePtr & cachePtr);
 
-v8::Local<v8::Value> v8Value(const gemfire::CacheablePtr & valuePtr);
-v8::Local<v8::Value> v8Value(const gemfire::CacheableKeyPtr & keyPtr);
-v8::Local<v8::Value> v8Value(const gemfire::CacheableInt64Ptr & valuePtr);
-v8::Local<v8::Object> v8Value(const gemfire::StructPtr & structPtr);
-v8::Local<v8::Value> v8Value(const gemfire::PdxInstancePtr & pdxInstancePtr);
-v8::Local<v8::Object> v8Value(const gemfire::SelectResultsPtr & selectResultsPtr);
-v8::Local<v8::Object> v8Value(const gemfire::CacheableHashMapPtr & hashMapPtr);
-v8::Local<v8::Object> v8Value(const gemfire::HashMapOfCacheablePtr & hashMapPtr);
-v8::Local<v8::Object> v8Value(const gemfire::RegionEntryPtr & regionEntryPtr);
-v8::Local<v8::Array> v8Value(const gemfire::VectorOfCacheablePtr & vectorPtr);
-v8::Local<v8::Array> v8Value(const gemfire::VectorOfCacheableKeyPtr & vectorPtr);
-v8::Local<v8::Array> v8Value(const gemfire::VectorOfRegionEntry & vectorPtr);
-v8::Local<v8::Date> v8Value(const gemfire::CacheableDatePtr & datePtr);
+v8::Local<v8::Value> v8Value(const apache::geode::client::CacheablePtr & valuePtr);
+v8::Local<v8::Value> v8Value(const apache::geode::client::CacheableKeyPtr & keyPtr);
+v8::Local<v8::Value> v8Value(const apache::geode::client::CacheableInt64Ptr & valuePtr);
+v8::Local<v8::Object> v8Value(const apache::geode::client::StructPtr & structPtr);
+v8::Local<v8::Value> v8Value(const apache::geode::client::PdxInstancePtr & pdxInstancePtr);
+v8::Local<v8::Object> v8Value(const apache::geode::client::SelectResultsPtr & selectResultsPtr);
+v8::Local<v8::Object> v8Value(const apache::geode::client::CacheableHashMapPtr & hashMapPtr);
+v8::Local<v8::Object> v8Value(const apache::geode::client::HashMapOfCacheablePtr & hashMapPtr);
+v8::Local<v8::Object> v8Value(const apache::geode::client::RegionEntryPtr & regionEntryPtr);
+v8::Local<v8::Array> v8Value(const apache::geode::client::VectorOfCacheablePtr & vectorPtr);
+v8::Local<v8::Array> v8Value(const apache::geode::client::VectorOfCacheableKeyPtr & vectorPtr);
+v8::Local<v8::Array> v8Value(const apache::geode::client::VectorOfRegionEntry & vectorPtr);
+v8::Local<v8::Date> v8Value(const apache::geode::client::CacheableDatePtr & datePtr);
 v8::Local<v8::Boolean> v8Value(bool value);
 
 template<typename T>
-v8::Local<v8::Array> v8Array(const gemfire::SharedPtr<T> & iterablePtr) {
+v8::Local<v8::Array> v8Array(const apache::geode::client::SharedPtr<T> & iterablePtr) {
   NanEscapableScope();
 
   unsigned int length = iterablePtr->size();
@@ -61,7 +63,7 @@ v8::Local<v8::Array> v8Array(const gemfire::SharedPtr<T> & iterablePtr) {
 }
 
 template<typename T>
-v8::Local<v8::Object> v8Object(const gemfire::SharedPtr<T> & hashMapPtr) {
+v8::Local<v8::Object> v8Object(const apache::geode::client::SharedPtr<T> & hashMapPtr) {
   NanEscapableScope();
 
   v8::Local<v8::Object> v8Object(NanNew<v8::Object>());
@@ -69,8 +71,8 @@ v8::Local<v8::Object> v8Object(const gemfire::SharedPtr<T> & hashMapPtr) {
   for (typename T::Iterator iterator = hashMapPtr->begin();
        iterator != hashMapPtr->end();
        iterator++) {
-    gemfire::CacheablePtr keyPtr(iterator.first());
-    gemfire::CacheablePtr valuePtr(iterator.second());
+    apache::geode::client::CacheablePtr keyPtr(iterator.first());
+    apache::geode::client::CacheablePtr valuePtr(iterator.second());
 
     v8Object->Set(v8Value(keyPtr),
         v8Value(valuePtr));

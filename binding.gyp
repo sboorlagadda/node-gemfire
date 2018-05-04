@@ -9,11 +9,14 @@
       '-fno-rtti', 
       '-fno-exceptions'
     ],
+    "cflags": [ 
+      '-std=c++11' 
+      ],
     "defines": [
       "_REENTRANT"
     ],
     "libraries": [ 
-      "-lgfcppcache", 
+      "-lpivotal-gemfire", 
       "-L$(GFCPP)/lib"
     ],
     "sources": [
@@ -63,7 +66,10 @@
           ],
           "sources": [
             "spec/cpp/test.cpp",
-          ]
+          ],
+           "cflags": [ 
+      '-std=c++11' 
+      ]
         }
       ]
     }]

@@ -891,7 +891,8 @@ describe("gemfire.Region", function() {
     });
 
     it("has a scope property", function() {
-      expect(region.attributes.scope).toEqual("DISTRIBUTED_NO_ACK");
+      //TODO there is no scope in GemFire 9
+      //expect(region.attributes.scope).toEqual("DISTRIBUTED_NO_ACK");
     });
   });
 
@@ -1054,7 +1055,7 @@ describe("gemfire.Region", function() {
 
     it("passes along errors from an invalid query", function(done) {
       region.query("Invalid query", function(error, response) {
-        expect(error).toBeError("gemfire::QueryException", /Syntax error in query/);
+        expect(error).toBeError("apache::geode::client::QueryException", /Syntax error in query/);
         done();
       });
     });
@@ -1092,7 +1093,7 @@ describe("gemfire.Region", function() {
 
         function (next) {
           region.selectValue("foo = 'bar'", function(error, response) {
-            expect(error).toBeError("gemfire::QueryException", "selectValue has more than one result");
+            expect(error).toBeError("apache::geode::client::QueryException", "selectValue has more than one result");
             next();
           });
         }
@@ -1125,7 +1126,7 @@ describe("gemfire.Region", function() {
 
     it("passes along errors from an invalid query", function(done) {
       region.selectValue("Invalid query", function(error, response) {
-        expect(error).toBeError("gemfire::QueryException", /Syntax error in query/);
+        expect(error).toBeError("apache::geode::client::QueryException", /Syntax error in query/);
         done();
       });
     });
@@ -1184,7 +1185,7 @@ describe("gemfire.Region", function() {
 
     it("passes along errors from an invalid query", function(done) {
       region.existsValue("Invalid query", function(error, response) {
-        expect(error).toBeError('gemfire::QueryException', /Syntax error in query/);
+        expect(error).toBeError('apache::geode::client::QueryException', /Syntax error in query/);
         done();
       });
     });

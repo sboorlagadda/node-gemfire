@@ -1,4 +1,4 @@
-#include <gfcpp/GemfireCppCache.hpp>
+#include <geode/GeodeCppCache.hpp>
 #include "gemfire_worker.hpp"
 #include "exceptions.hpp"
 
@@ -9,7 +9,7 @@ namespace node_gemfire {
 void GemfireWorker::Execute() {
   try {
     ExecuteGemfireWork();
-  } catch(gemfire::Exception & exception) {
+  } catch(apache::geode::client::Exception & exception) {
     exceptionPtr = exception.clone();
   }
 }

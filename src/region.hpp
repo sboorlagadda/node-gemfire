@@ -4,7 +4,7 @@
 #include <v8.h>
 #include <nan.h>
 #include <node.h>
-#include <gfcpp/Region.hpp>
+#include <geode/Region.hpp>
 #include "region_event_registry.hpp"
 
 namespace node_gemfire {
@@ -13,7 +13,7 @@ class Region : public node::ObjectWrap {
  public:
   Region(v8::Local<v8::Object> regionHandle,
          v8::Local<v8::Object> cacheHandle,
-         gemfire::RegionPtr regionPtr) :
+         apache::geode::client::RegionPtr regionPtr) :
     regionPtr(regionPtr) {
       Wrap(regionHandle);
       NanAssignPersistent(this->cacheHandle, cacheHandle);
@@ -26,7 +26,7 @@ class Region : public node::ObjectWrap {
 
   static void Init(v8::Local<v8::Object> exports);
   static v8::Local<v8::Value> New(v8::Local<v8::Object> cacheObject,
-                                  gemfire::RegionPtr regionPtr);
+                                  apache::geode::client::RegionPtr regionPtr);
   static NAN_METHOD(Clear);
   static NAN_METHOD(Put);
   static NAN_METHOD(PutSync);
@@ -53,7 +53,7 @@ class Region : public node::ObjectWrap {
   template<typename T>
   static NAN_METHOD(Query);
 
-  gemfire::RegionPtr regionPtr;
+  apache::geode::client::RegionPtr regionPtr;
 
  private:
   v8::Persistent<v8::Object> cacheHandle;

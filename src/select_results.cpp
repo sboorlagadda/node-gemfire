@@ -1,10 +1,10 @@
-#include <gfcpp/SelectResultsIterator.hpp>
+#include <geode/SelectResultsIterator.hpp>
 #include <sstream>
 #include "conversions.hpp"
 #include "select_results.hpp"
 
 using namespace v8;
-using namespace gemfire;
+using namespace apache::geode::client;
 
 namespace node_gemfire {
 

@@ -1,10 +1,10 @@
 #ifndef __EVENT_STREAM_HPP__
 #define __EVENT_STREAM_HPP__
 
-#include <gfcpp/SharedPtr.hpp>
-#include <gfcpp/SharedBase.hpp>
-#include <gfcpp/CacheableBuiltins.hpp>
-#include <gfcpp/EntryEvent.hpp>
+#include <geode/SharedPtr.hpp>
+#include <geode/SharedBase.hpp>
+#include <geode/CacheableBuiltins.hpp>
+#include <geode/EntryEvent.hpp>
 #include <uv.h>
 #include <v8.h>
 #include <vector>
@@ -13,7 +13,7 @@
 
 namespace node_gemfire {
 
-class EventStream: public gemfire::SharedBase {
+class EventStream: public apache::geode::client::SharedBase {
  public:
   explicit EventStream(
       void * target,
@@ -35,9 +35,9 @@ class EventStream: public gemfire::SharedBase {
   class Event {
    public:
     Event(const std::string & eventName,
-               const gemfire::EntryEvent & event) :
+               const apache::geode::client::EntryEvent & event) :
       eventName(eventName),
-      entryEventPtr(new gemfire::EntryEvent(event.getRegion(),
+      entryEventPtr(new apache::geode::client::EntryEvent(event.getRegion(),
                                             event.getKey(),
                                             event.getOldValue(),
                                             event.getNewValue(),
@@ -46,11 +46,11 @@ class EventStream: public gemfire::SharedBase {
 
     v8::Local<v8::Object> v8Object();
     std::string getName();
-    gemfire::RegionPtr getRegion();
+    apache::geode::client::RegionPtr getRegion();
 
    private:
     std::string eventName;
-    gemfire::EntryEventPtr entryEventPtr;
+    apache::geode::client::EntryEventPtr entryEventPtr;
   };
 
   void add(Event * event);

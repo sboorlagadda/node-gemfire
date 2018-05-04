@@ -103,31 +103,31 @@ TEST(getClassName, fieldNamesCanContainBackslash) {
 }
 
 TEST(getRegionShortcut, proxy) {
-  EXPECT_EQ(gemfire::PROXY, getRegionShortcut("PROXY"));
+  EXPECT_EQ(apache::geode::client::PROXY, getRegionShortcut("PROXY"));
 }
 
 TEST(getRegionShortcut, cachingProxy) {
-  EXPECT_EQ(gemfire::CACHING_PROXY, getRegionShortcut("CACHING_PROXY"));
+  EXPECT_EQ(apache::geode::client::CACHING_PROXY, getRegionShortcut("CACHING_PROXY"));
 }
 
 TEST(getRegionShortcut, local) {
-  EXPECT_EQ(gemfire::LOCAL, getRegionShortcut("LOCAL"));
+  EXPECT_EQ(apache::geode::client::LOCAL, getRegionShortcut("LOCAL"));
 }
 
 TEST(getRegionShortcut, cachingProxyEntryLru) {
-  EXPECT_EQ(gemfire::CACHING_PROXY_ENTRY_LRU, getRegionShortcut("CACHING_PROXY_ENTRY_LRU"));
+  EXPECT_EQ(apache::geode::client::CACHING_PROXY_ENTRY_LRU, getRegionShortcut("CACHING_PROXY_ENTRY_LRU"));
 }
 
 TEST(getRegionShortcut, localEntryLru) {
-  EXPECT_EQ(gemfire::LOCAL_ENTRY_LRU, getRegionShortcut("LOCAL_ENTRY_LRU"));
+  EXPECT_EQ(apache::geode::client::LOCAL_ENTRY_LRU, getRegionShortcut("LOCAL_ENTRY_LRU"));
 }
 
 TEST(getRegionShortcut, incorrectShortcut) {
-  EXPECT_NE(gemfire::PROXY, getRegionShortcut("NULL"));
-  EXPECT_NE(gemfire::CACHING_PROXY, getRegionShortcut("NULL"));
-  EXPECT_NE(gemfire::CACHING_PROXY_ENTRY_LRU, getRegionShortcut("NULL"));
-  EXPECT_NE(gemfire::LOCAL, getRegionShortcut("NULL"));
-  EXPECT_NE(gemfire::LOCAL_ENTRY_LRU, getRegionShortcut("NULL"));
+  EXPECT_NE(apache::geode::client::PROXY, getRegionShortcut("NULL"));
+  EXPECT_NE(apache::geode::client::CACHING_PROXY, getRegionShortcut("NULL"));
+  EXPECT_NE(apache::geode::client::CACHING_PROXY_ENTRY_LRU, getRegionShortcut("NULL"));
+  EXPECT_NE(apache::geode::client::LOCAL, getRegionShortcut("NULL"));
+  EXPECT_NE(apache::geode::client::LOCAL_ENTRY_LRU, getRegionShortcut("NULL"));
 }
 
 NAN_METHOD(run) {

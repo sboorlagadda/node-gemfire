@@ -1,7 +1,7 @@
 #include "region_event_listener.hpp"
 #include "region_event_registry.hpp"
 
-using namespace gemfire;
+using namespace apache::geode::client;
 
 namespace node_gemfire {
 

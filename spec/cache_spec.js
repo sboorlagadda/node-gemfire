@@ -33,15 +33,15 @@ describe("gemfire.Cache", function() {
 
     it("accepts a correct XML file path", function(done) {
       expectExternalSuccess("correct_xml_file", done);
+    
     });
 
     it("throws an error if the XML file is not found", function(done) {
-      var expectedMessage = 'I/O warning : failed to load external entity "/bad/path.xml"';
       expectExternalFailure("missing_xml_file", done, expectedMessage);
     });
 
     it("throws an error if setReadSerialized not set to true in the XML", function(done) {
-      var expectedMessage = "<pdx read-serialized='true' /> must be set in your cache xml";
+      var expectedMessage = "pdx read-serialized";
       expectExternalFailure("not_pdx_read_serialized", done, expectedMessage);
     });
 
@@ -256,18 +256,18 @@ describe("gemfire.Cache", function() {
           function(callback) { region.put("empty", {}, callback); },
         ],
         function() {
-          const query = "SELECT * FROM /exampleRegion WHERE foo.toLowerCase LIKE '%bar%'";
+          const query = "SELECT * FROM /exampleRegion WHERE foo.toLowerCase() LIKE '%bar%'";
 
           cache.executeQuery(query, {poolName: "myPool"}, function(error, response) {
+
+           
             expect(error).not.toBeError();
+
             if(error) { return; }
-
             const results = response.toArray();
-
             expect(results.length).toEqual(2);
             expect(results).toContain(object);
             expect(results).toContain(otherObject);
-
             done();
           });
         }
@@ -515,7 +515,7 @@ describe("gemfire.Cache", function() {
       var exception;
 
       cache.executeQuery("INVALID;", {poolName: "myPool"}, function(error, results) {
-        expect(error).toBeError('gemfire::QueryException');
+        expect(error).toBeError('apache::geode::client::QueryException');
         expect(results).toBeUndefined();
         done();
       });
@@ -742,7 +742,7 @@ describe("gemfire.Cache", function() {
       }
 
       expect(createExistingRegion).toThrowNamedError(
-        'gemfire::RegionExistsException',
+        'apache::geode::client::RegionExistsException',
         'Cache::createRegion: "exampleRegion" region exists in local cache'
       );
     });
@@ -815,7 +815,8 @@ describe("gemfire.Cache", function() {
         const region = cache.createRegion("createRegionCachingProxyTest", { type: "PROXY", poolName: "myPool" });
 
         expect(region.attributes.cachingEnabled).toBeFalsy();
-        expect(region.attributes.scope).toEqual("DISTRIBUTED_NO_ACK");
+        //TODO - scope isn't a thing anymore in the CPP API.
+        //expect(region.attributes.scope).toEqual("DISTRIBUTED_NO_ACK");
       });
     });
 
@@ -825,7 +826,8 @@ describe("gemfire.Cache", function() {
         const region = cache.createRegion("createRegionProxyTest", { type: "CACHING_PROXY", poolName: "myPool" });
 
         expect(region.attributes.cachingEnabled).toBeTruthy();
-        expect(region.attributes.scope).toEqual("DISTRIBUTED_NO_ACK");
+        //TODO - scope isn't a thing anymore in the CPP API.
+        //expect(region.attributes.scope).toEqual("DISTRIBUTED_NO_ACK");
       });
     });
 
@@ -834,7 +836,9 @@ describe("gemfire.Cache", function() {
         const cache = factories.getCache();
         const region = cache.createRegion("createRegionLocalTest", { type: "LOCAL" });
         expect(region.attributes.cachingEnabled).toBeTruthy();
-        expect(region.attributes.scope).toEqual("LOCAL");
+
+        //TODO - scope isn't a thing anymore in the CPP API.
+        //expect(region.attributes.scope).toEqual("LOCAL");
       });
     });
 

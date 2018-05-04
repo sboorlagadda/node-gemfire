@@ -2,7 +2,7 @@
 #define __GEMFIRE_WORKER_HPP__
 
 #include <nan.h>
-#include <gfcpp/GemfireCppCache.hpp>
+#include <geode/GeodeCppCache.hpp>
 #include <string>
 
 namespace node_gemfire {
@@ -24,7 +24,7 @@ class GemfireWorker : public NanAsyncWorker {
  protected:
   v8::Local<v8::Value> errorObject();
 
-  gemfire::ExceptionPtr exceptionPtr;
+  apache::geode::client::ExceptionPtr exceptionPtr;
   std::string errorName;
 };
 
