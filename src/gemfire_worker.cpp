@@ -1,4 +1,8 @@
 #include <geode/GeodeCppCache.hpp>
+#include <execinfo.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include "gemfire_worker.hpp"
 #include "exceptions.hpp"
 
@@ -10,46 +14,33 @@ void GemfireWorker::Execute() {
   try {
     ExecuteGemfireWork();
   } catch(apache::geode::client::Exception & exception) {
-    exceptionPtr = exception.clone();
+    SetError(exception.getName(), exception.getMessage());
+    threwException = true;
   }
 }
 
-void GemfireWorker::HandleErrorCallback() {
-  NanScope();
-
-  static const int argc = 1;
-  Local<Value> argv[argc] = { errorObject() };
-  callback->Call(argc, argv);
-}
-
-void GemfireWorker::WorkComplete() {
-  NanScope();
-
-  if (exceptionPtr != NULLPTR || ErrorMessage() != NULL) {
-    HandleErrorCallback();
-  } else {
-    HandleOKCallback();
+ void GemfireWorker::WorkComplete() {
+    Nan::HandleScope scope;
+    if(threwException){
+        Nan::ThrowError(errorObject());
+    } else if (ErrorMessage() == NULL){
+      HandleOKCallback();
+    } else {
+      HandleErrorCallback();
+    }
+    delete callback;
+    callback = NULL;
+    threwException = false;
+  }
+  void GemfireWorker::SetError( const char * name, const char * message){
+    errorName = name;
+    SetErrorMessage(message);
   }
 
-  delete callback;
-  callback = NULL;
-}
-
-void GemfireWorker::SetError(const char * name, const char * message) {
-  errorName = name;
-  SetErrorMessage(message);
-}
-
-Local<Value> GemfireWorker::errorObject() {
-  NanEscapableScope();
-
-  if (exceptionPtr != NULLPTR) {
-    return NanEscapeScope(v8Error(*exceptionPtr));
-  } else {
-    Local<Object> error(NanError(ErrorMessage())->ToObject());
-    error->Set(NanNew("name"), NanNew(errorName));
-    return NanEscapeScope(error);
+  Local<Value> GemfireWorker::errorObject() {
+    Nan::EscapableHandleScope scope;
+    Local<Object> err = Nan::Error(ErrorMessage()).As<v8::Object>();
+    Nan::Set(err, Nan::New("name").ToLocalChecked(), Nan::New(errorName).ToLocalChecked());
+    return scope.Escape(err);
   }
-}
-
 }  // namespace node_gemfire

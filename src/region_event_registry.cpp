@@ -38,7 +38,7 @@ void RegionEventRegistry::emitCallback(uv_async_t * async, int status) {
 }
 
 void RegionEventRegistry::publishEvents() {
-  NanScope();
+  Nan::HandleScope scope;
 
   std::vector<EventStream::Event *> eventVector(eventStream->nextEvents());
 
@@ -52,7 +52,7 @@ void RegionEventRegistry::publishEvents() {
          iterator != regionSet.end();
          ++iterator) {
       Region * region(*iterator);
-      Local<Object> regionObject(NanObjectWrapHandle(region));
+      Local<Object> regionObject(region->handle());
       if (region->regionPtr == event->getRegion()) {
         emitEvent(regionObject, event->getName().c_str(), eventPayload);
       }

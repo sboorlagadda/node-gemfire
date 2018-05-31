@@ -1,4 +1,16 @@
 const childProcess = require('child_process');
+jasmine.getEnv().addReporter({
+  specStarted: function(result) {
+      console.log(result.fullName);
+  }
+});
+jasmine.getEnv().afterEach(function(){
+  console.log("done with last test")
+});
+process.on("uncaughtException",function(e) {
+  console.log("Caught unhandled exception: " + e);
+  console.log(" ---> : " + e.stack);
+});
 
 const errorMatchers = require("./error_matchers");
 
@@ -24,16 +36,8 @@ exports.expectExternalFailure = function expectExternalFailure(name, callback, m
   jasmine.addMatchers(errorMatchers);
 
   runExternalTest(name, function(error, stdout, stderr) {
-    console.log("name " + name + "\n" + 
-                "error " + error+ "\n" + 
-                "stderr - " + stderr+ "\n" +   
-                "message - " + message + "\n" +
-                "callback - " + callback + "\n" +
-                "index of message -> " + stderr.indexOf(message));
-
     expect(error).not.toBeNull();
     expect(stderr.indexOf(message) >= 0).toBe(true);
-    console.log("message - " + message + " *******");
     callback(error, stdout, stderr);
   });
 };

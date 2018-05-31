@@ -8,8 +8,9 @@
 
 namespace node_gemfire {
 
-class Cache : public node::ObjectWrap {
+class Cache : public Nan::ObjectWrap {
  public:
+  // Called from binding.cpp to initialize the system
   static void Init(v8::Local<v8::Object> exports);
 
   apache::geode::client::CachePtr cachePtr;
@@ -36,7 +37,12 @@ class Cache : public node::ObjectWrap {
 
  private:
   static apache::geode::client::PoolPtr getPool(const v8::Handle<v8::Value> & poolNameValue);
-  v8::Local<v8::Function> exitCallback();
+  static v8::Local<v8::Function> exitCallback();
+  
+  static inline Nan::Persistent<v8::Function> & constructor() {
+    static Nan::Persistent<v8::Function> my_constructor;
+    return my_constructor;
+  }
 };
 
 }  // namespace node_gemfire

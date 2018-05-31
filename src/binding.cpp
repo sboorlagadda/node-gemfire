@@ -14,42 +14,45 @@ using namespace apache::geode::client;
 namespace node_gemfire {
 
 NAN_METHOD(Connected) {
-  NanScope();
+  Nan::HandleScope scope;
   DistributedSystemPtr distributedSystemPtr = DistributedSystem::getInstance();
-  NanReturnValue(NanNew(distributedSystemPtr->isConnected()));
+  info.GetReturnValue().Set(Nan::New(distributedSystemPtr->isConnected()));
 }
 
 NAN_METHOD(Initialize) {
-  NanScope();
+  printf("in node gemfire gemfire init\n");
+  Nan::HandleScope scope;
 
-  Local<Object> gemfire(NanNew<Object>());
+  Local<Object> gemfire = Nan::New<Object>();
 
-  gemfire->ForceSet(NanNew("version"),
-      NanNew(NODE_GEMFIRE_VERSION),
+  Nan::DefineOwnProperty(gemfire, Nan::New("version").ToLocalChecked(),
+      Nan::New(NODE_GEMFIRE_VERSION).ToLocalChecked(),
       static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
-  gemfire->ForceSet(NanNew("gemfireVersion"),
-      NanNew(apache::geode::client::CacheFactory::getVersion()),
+  Nan::DefineOwnProperty(gemfire, Nan::New("gemfireVersion").ToLocalChecked(),
+      Nan::New(std::string(apache::geode::client::CacheFactory::getVersion())).ToLocalChecked(),
       static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
-  gemfire->ForceSet(NanNew("connected"),
-      NanNew<FunctionTemplate>(Connected)->GetFunction(),
+  Nan::DefineOwnProperty(gemfire, Nan::New("connected").ToLocalChecked(),
+      Nan::New<FunctionTemplate>(Connected)->GetFunction(),
       static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
+  printf("hellow\n");
   node_gemfire::Cache::Init(gemfire);
   node_gemfire::Region::Init(gemfire);
   node_gemfire::SelectResults::Init(gemfire);
 
-  NanAssignPersistent(dependencies, args[0]->ToObject());
+  dependencies.Reset(v8::Isolate::GetCurrent(),info[0]->ToObject());
 
-  NanReturnValue(gemfire);
+  info.GetReturnValue().Set(gemfire);
+
 }
 
 }  // namespace node_gemfire
 
 static void Initialize(Local<Object> exports) {
-  Local<FunctionTemplate> initializeTemplate(NanNew<FunctionTemplate>(node_gemfire::Initialize));
-  exports->Set(NanNew("initialize"), initializeTemplate->GetFunction());
+  Local<FunctionTemplate> initializeTemplate(Nan::New<FunctionTemplate>(node_gemfire::Initialize));
+  exports->Set(Nan::New("initialize").ToLocalChecked(), initializeTemplate->GetFunction());
 }
 
 NODE_MODULE(gemfire, Initialize)

@@ -1,5 +1,8 @@
 # vim: set ft=javascript
 {
+  'variables': {
+    'Build_Debug%': 'false'
+  },
   "target_defaults": {
     "include_dirs" : [
       "$(GFCPP)/include",
@@ -45,6 +48,11 @@
       ]
     },
     {
+       "target_name": "test",
+       "libraries": [ "-lgtest" ],
+        "sources": [ "spec/cpp/test.cpp", ],
+    },
+    {
       "target_name": "action_after_build",
       "type": "none",
       "dependencies": [ "<(module_name)" ],
@@ -55,23 +63,5 @@
         }
       ]
     },
-  ],
-  "conditions": [
-    ["configuration=='Debug'", {
-      "targets": [
-        {
-          "target_name": "test",
-          "libraries": [
-            "-lgtest"
-          ],
-          "sources": [
-            "spec/cpp/test.cpp",
-          ],
-           "cflags": [ 
-      '-std=c++11' 
-      ]
-        }
-      ]
-    }]
   ]
 }

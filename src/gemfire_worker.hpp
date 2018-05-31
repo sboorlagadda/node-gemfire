@@ -7,25 +7,22 @@
 
 namespace node_gemfire {
 
-class GemfireWorker : public NanAsyncWorker {
+class GemfireWorker : public Nan::AsyncWorker {
  public:
-  explicit GemfireWorker(
-      NanCallback * callback) :
-    NanAsyncWorker(callback),
-    exceptionPtr(NULLPTR),
-    errorName() {}
+    explicit GemfireWorker(Nan::Callback * callback) :
+      Nan::AsyncWorker(callback),
+      errorName(),
+      threwException(false) {}
 
-  virtual void SetError(const char * name, const char * message);
-  virtual void ExecuteGemfireWork() = 0;
-  virtual void HandleErrorCallback();
-  virtual void WorkComplete();
-  virtual void Execute();
-
- protected:
-  v8::Local<v8::Value> errorObject();
-
-  apache::geode::client::ExceptionPtr exceptionPtr;
-  std::string errorName;
+    void Execute();
+    virtual void ExecuteGemfireWork() = 0;
+    void WorkComplete();
+    void SetError(const char * name, const char * message);
+  
+  protected: 
+    v8::Local<v8::Value> errorObject();
+    std::string errorName;
+    bool threwException;
 };
 
 }  // namespace node_gemfire

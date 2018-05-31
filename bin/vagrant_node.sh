@@ -3,13 +3,10 @@ if ! [ -e ~/.nvm/nvm.sh ]; then
 fi
 source ~/.nvm/nvm.sh
 
-nvm list 0.10 || nvm install -s 0.10
-nvm exec 0.10 which grunt || nvm exec 0.10 npm install -g grunt jasmine
+nvm list 8 || nvm install -s 8 || npm install -g npm@6
+nvm exec 8 which grunt || nvm exec 8 npm install -g grunt jasmine
 
-nvm list 0.11 || nvm install -s 0.11
-nvm exec 0.11 which grunt || nvm exec 0.11 npm install -g grunt jasmine
+# nvm list 10 || nvm install -s 10
+# nvm exec 10 which grunt || nvm exec 10 npm install -g grunt jasmine
 
-nvm list 0.12 || nvm install -s 0.12
-nvm exec 0.12 which grunt || nvm exec 0.12 npm install -g grunt jasmine
-
-nvm alias default 0.10
+nvm alias default 8

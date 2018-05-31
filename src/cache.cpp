@@ -1,5 +1,6 @@
 #include "cache.hpp"
 #include <v8.h>
+#include <node.h>
 #include <nan.h>
 #include <geode/Cache.hpp>
 #include <geode/CacheFactory.hpp>
@@ -19,43 +20,50 @@ using namespace apache::geode::client;
 
 namespace node_gemfire {
 
-void Cache::Init(Local<Object> exports) {
-  NanScope();
+static CachePtr closeThisCache = NULLPTR;
 
-  Local<FunctionTemplate> cacheConstructorTemplate =
-    NanNew<FunctionTemplate>(Cache::New);
+static void closeCacheAtExit(void * arg){
+  printf("closeing the cache\n");
+   if(closeThisCache != NULLPTR && !closeThisCache->isClosed()){
+     closeThisCache->close();
+   }
+}
+NAN_MODULE_INIT(Cache::Init) {
+  Nan::HandleScope scope;
 
-  cacheConstructorTemplate->SetClassName(NanNew("Cache"));
-  cacheConstructorTemplate->InstanceTemplate()->SetInternalFieldCount(1);
+  printf("a\n");
+  v8::Local<v8::FunctionTemplate> constructorTemplate = Nan::New<v8::FunctionTemplate>(New);
+  printf("b\n");  
+  constructorTemplate->SetClassName(Nan::New("Cache").ToLocalChecked());
+  printf("c\n");
+  
+  constructorTemplate->InstanceTemplate()->SetInternalFieldCount(1);
+  printf("d\n");
 
-  NanSetPrototypeTemplate(cacheConstructorTemplate, "close",
-      NanNew<FunctionTemplate>(Cache::Close)->GetFunction());
-  NanSetPrototypeTemplate(cacheConstructorTemplate, "executeFunction",
-      NanNew<FunctionTemplate>(Cache::ExecuteFunction)->GetFunction());
-  NanSetPrototypeTemplate(cacheConstructorTemplate, "executeQuery",
-      NanNew<FunctionTemplate>(Cache::ExecuteQuery)->GetFunction());
-  NanSetPrototypeTemplate(cacheConstructorTemplate, "createRegion",
-      NanNew<FunctionTemplate>(Cache::CreateRegion)->GetFunction());
-  NanSetPrototypeTemplate(cacheConstructorTemplate, "getRegion",
-      NanNew<FunctionTemplate>(Cache::GetRegion)->GetFunction());
-  NanSetPrototypeTemplate(cacheConstructorTemplate, "rootRegions",
-      NanNew<FunctionTemplate>(Cache::RootRegions)->GetFunction());
-  NanSetPrototypeTemplate(cacheConstructorTemplate, "inspect",
-      NanNew<FunctionTemplate>(Cache::Inspect)->GetFunction());
+  Nan::SetPrototypeMethod(constructorTemplate, "close", Cache::Close);
+  printf("e\n");
+  Nan::SetPrototypeMethod(constructorTemplate, "executeFunction", Cache::ExecuteFunction);
+  Nan::SetPrototypeMethod(constructorTemplate, "executeQuery", Cache::ExecuteQuery);
+  Nan::SetPrototypeMethod(constructorTemplate, "createRegion", Cache::CreateRegion);
+  Nan::SetPrototypeMethod(constructorTemplate, "getRegion", Cache::GetRegion);
+  Nan::SetPrototypeMethod(constructorTemplate, "rootRegions", Cache::RootRegions);
+  Nan::SetPrototypeMethod(constructorTemplate, "inspect", Cache::Inspect);
 
-  exports->Set(NanNew("Cache"), cacheConstructorTemplate->GetFunction());
+  constructor().Reset(Nan::GetFunction(constructorTemplate).ToLocalChecked());
+
+  Nan::Set(target, Nan::New("Cache").ToLocalChecked(), Nan::GetFunction(constructorTemplate).ToLocalChecked());
 }
 
 NAN_METHOD(Cache::New) {
-  NanScope();
+  Nan::HandleScope scope;
 
-  if (args.Length() < 1) {
-    NanThrowError("Cache constructor requires a path to an XML configuration file as its first argument.");
-    NanReturnUndefined();
+  if (info.Length() < 1) {
+    Nan::ThrowError("Cache constructor requires a path to an XML configuration file as its first argument.");
+    return;
   }
 
   CacheFactoryPtr cacheFactory(CacheFactory::createCacheFactory());
-  cacheFactory->set("cache-xml-file", *NanAsciiString(args[0]));
+  cacheFactory->set("cache-xml-file", *Nan::Utf8String(info[0]));
   cacheFactory->setSubscriptionEnabled(true);
 
   CachePtr cachePtr;
@@ -63,46 +71,32 @@ NAN_METHOD(Cache::New) {
     cachePtr = cacheFactory->create();
   } catch(const apache::geode::client::Exception & exception) {
     ThrowGemfireException(exception);
-    NanReturnUndefined();
+    return;
   }
 
   if (!cachePtr->getPdxReadSerialized()) {
     cachePtr->close();
-    NanThrowError("<pdx read-serialized='true' /> must be set in your cache xml");
-    NanReturnUndefined();
+    Nan::ThrowError("<pdx read-serialized='true' /> must be set in your cache xml");
+    return;
   }
 
   Cache * cache = new Cache(cachePtr);
-  cache->Wrap(args.This());
+  cache->Wrap(info.This());
 
-  Local<Object> process(NanNew(dependencies)->Get(NanNew("process"))->ToObject());
-  static const int argc = 2;
-  Handle<Value> argv[argc] = { NanNew("exit"), cache->exitCallback() };
-  NanMakeCallback(process, "on", argc, argv);
-
-  NanReturnValue(args.This());
-}
-
-Local<Function> Cache::exitCallback() {
-  NanEscapableScope();
-
-  Local<Function> unboundExitCallback(NanNew<FunctionTemplate>(Cache::Close)->GetFunction());
-
-  static const int argc = 1;
-  Handle<Value> argv[argc] = { NanObjectWrapHandle(this) };
-  Local<Function> boundExitCallback(
-      NanMakeCallback(unboundExitCallback, "bind", argc, argv).As<Function>());
-
-  return NanEscapeScope(boundExitCallback);
+  // Just thinking do we really have to close the cache - maybe to flush some bits to disk???? cmb
+  closeThisCache = cachePtr;
+  node::AtExit(closeCacheAtExit);
+  
+  info.GetReturnValue().Set(info.This());
 }
 
 NAN_METHOD(Cache::Close) {
-  NanScope();
+  Nan::HandleScope scope;
 
-  Cache * cache = ObjectWrap::Unwrap<Cache>(args.This());
+  Cache * cache = Nan::ObjectWrap::Unwrap<Cache>(info.This());
   cache->close();
 
-  NanReturnUndefined();
+  return;
 }
 
 void Cache::close() {
@@ -115,7 +109,7 @@ class ExecuteQueryWorker : public GemfireWorker {
  public:
   ExecuteQueryWorker(QueryPtr queryPtr,
                      CacheableVectorPtr queryParamsPtr,
-                     NanCallback * callback) :
+                     Nan::Callback * callback) :
       GemfireWorker(callback),
       queryPtr(queryPtr),
       queryParamsPtr(queryParamsPtr) {}
@@ -125,10 +119,10 @@ class ExecuteQueryWorker : public GemfireWorker {
   }
 
   void HandleOKCallback() {
-    NanScope();
+    Nan::HandleScope scope;
 
     static const int argc = 2;
-    Local<Value> argv[2] = { NanUndefined(), v8Value(selectResultsPtr) };
+    Local<Value> argv[2] = { Nan::Undefined(), v8Value(selectResultsPtr) };
     callback->Call(argc, argv);
   }
 
@@ -138,85 +132,85 @@ class ExecuteQueryWorker : public GemfireWorker {
 };
 
 NAN_METHOD(Cache::ExecuteQuery) {
-  NanScope();
+  Nan::HandleScope scope;
 
-  int argsLength = args.Length();
+  int argsLength = info.Length();
 
-  if (argsLength == 0 || !args[0]->IsString()) {
-    NanThrowError("You must pass a query string and callback to executeQuery().");
-    NanReturnUndefined();
+  if (argsLength == 0 || !info[0]->IsString()) {
+    Nan::ThrowError("You must pass a query string and callback to executeQuery().");
+    return;
   }
 
   if (argsLength < 2) {
-    NanThrowError("You must pass a callback to executeQuery().");
-    NanReturnUndefined();
+    Nan::ThrowError("You must pass a callback to executeQuery().");
+    return;
   }
 
   Local<Function> callbackFunction;
-  Local<Value> poolNameValue(NanUndefined());
+  Local<Value> poolNameValue(Nan::Undefined());
   Local<Value> queryParams;
 
   // .executeQuery(query, function)
-  if (args[1]->IsFunction()) {
-    callbackFunction = args[1].As<Function>();
+  if (info[1]->IsFunction()) {
+    callbackFunction = info[1].As<Function>();
     // .executeQuery(query, optionsHash, function)
-  } else if (argsLength > 2 && args[2]->IsFunction()) {
-    callbackFunction = args[2].As<Function>();
+  } else if (argsLength > 2 && info[2]->IsFunction()) {
+    callbackFunction = info[2].As<Function>();
 
-    if (args[1]->IsObject() && !args[1]->IsFunction()) {
-      Local<Object> optionsObject = args[1]->ToObject();
-      poolNameValue = optionsObject->Get(NanNew("poolName"));
+    if (info[1]->IsObject() && !info[1]->IsFunction()) {
+      Local<Object> optionsObject = info[1]->ToObject();
+      poolNameValue = optionsObject->Get(Nan::New("poolName").ToLocalChecked());
     }
     // .executeQuery(query, paramsArray, optionsHash, function)
-  } else if (argsLength > 3 && args[3]->IsFunction()) {
-    callbackFunction = args[3].As<Function>();
+  } else if (argsLength > 3 && info[3]->IsFunction()) {
+    callbackFunction = info[3].As<Function>();
 
-    if (args[1]->IsArray() && !args[1]->IsFunction()) {
-      queryParams = args[1];
+    if (info[1]->IsArray() && !info[1]->IsFunction()) {
+      queryParams = info[1];
     }
 
-    if (args[2]->IsObject() && !args[2]->IsFunction()) {
-      Local<Object> optionsObject = args[2]->ToObject();
-      poolNameValue = optionsObject->Get(NanNew("poolName"));
+    if (info[2]->IsObject() && !info[2]->IsFunction()) {
+      Local<Object> optionsObject = info[2]->ToObject();
+      poolNameValue = optionsObject->Get(Nan::New("poolName").ToLocalChecked());
     }
   } else {
-    NanThrowError("You must pass a function as the callback to executeQuery().");
-    NanReturnUndefined();
+    Nan::ThrowError("You must pass a function as the callback to executeQuery().");
+    return;
   }
 
-  Cache * cache = ObjectWrap::Unwrap<Cache>(args.This());
+  Cache * cache = Nan::ObjectWrap::Unwrap<Cache>(info.This());
   CachePtr cachePtr(cache->cachePtr);
 
   if (cache->cachePtr->isClosed()) {
-    NanThrowError("Cannot execute query; cache is closed.");
-    NanReturnUndefined();
+    Nan::ThrowError("Cannot execute query; cache is closed.");
+    return;
   }
 
   QueryServicePtr queryServicePtr;
   CacheableVectorPtr queryParamsPtr = NULLPTR;
 
-  std::string queryString(*NanUtf8String(args[0]));
+  std::string queryString(*Nan::Utf8String(info[0]));
 
   try {
     if (poolNameValue->IsUndefined()) {
       queryServicePtr = cachePtr->getQueryService();
     } else {
-      std::string poolName(*NanUtf8String(poolNameValue));
+      std::string poolName(*Nan::Utf8String(poolNameValue));
       PoolPtr poolPtr(getPool(poolNameValue));
 
       if (poolPtr == NULLPTR) {
-        std::string poolName(*NanUtf8String(poolNameValue));
+        std::string poolName(*Nan::Utf8String(poolNameValue));
         std::stringstream errorMessageStream;
         errorMessageStream << "executeQuery: `" << poolName << "` is not a valid pool name";
-        NanThrowError(errorMessageStream.str().c_str());
-        NanReturnUndefined();
+        Nan::ThrowError(errorMessageStream.str().c_str());
+        return;
       }
 
       queryServicePtr = cachePtr->getQueryService(poolName.c_str());
     }
   } catch (const apache::geode::client::Exception & exception) {
     ThrowGemfireException(exception);
-    NanReturnUndefined();
+    return;
   }
   if (!(queryParams.IsEmpty() || queryParams->IsUndefined())) {
     queryParamsPtr = gemfireVector(queryParams.As<Array>(), cachePtr);
@@ -224,51 +218,51 @@ NAN_METHOD(Cache::ExecuteQuery) {
 
   QueryPtr queryPtr(queryServicePtr->newQuery(queryString.c_str()));
 
-  NanCallback * callback = new NanCallback(callbackFunction);
+  Nan::Callback * callback = new Nan::Callback(callbackFunction);
 
   ExecuteQueryWorker * worker = new ExecuteQueryWorker(queryPtr, queryParamsPtr, callback);
-  NanAsyncQueueWorker(worker);
+  Nan::AsyncQueueWorker(worker);
 
-  NanReturnValue(args.This());
+  info.GetReturnValue().Set(info.This());
 }
 
 NAN_METHOD(Cache::CreateRegion) {
-  NanScope();
+  Nan::HandleScope scope;
 
-  if (args.Length() < 1) {
-    NanThrowError(
+  if (info.Length() < 1) {
+    Nan::ThrowError(
         "createRegion: You must pass the name of a GemFire region to create "
         "and a region configuration object.");
-    NanReturnUndefined();
+    return;
   }
 
-  if (!args[0]->IsString()) {
-    NanThrowError("createRegion: You must pass a string as the name of a GemFire region.");
-    NanReturnUndefined();
+  if (!info[0]->IsString()) {
+    Nan::ThrowError("createRegion: You must pass a string as the name of a GemFire region.");
+    return;
   }
 
-  if (!args[1]->IsObject()) {
-    NanThrowError("createRegion: You must pass a configuration object as the second argument.");
-    NanReturnUndefined();
+  if (!info[1]->IsObject()) {
+    Nan::ThrowError("createRegion: You must pass a configuration object as the second argument.");
+    return;
   }
 
-  Local<Object> regionConfiguration(args[1]->ToObject());
+  Local<Object> regionConfiguration(info[1]->ToObject());
 
-  Local<Value> regionType(regionConfiguration->Get(NanNew("type")));
+  Local<Value> regionType(regionConfiguration->Get(Nan::New("type").ToLocalChecked()));
   if (regionType->IsUndefined()) {
-    NanThrowError("createRegion: The region configuration object must have a type property.");
-    NanReturnUndefined();
+    Nan::ThrowError("createRegion: The region configuration object must have a type property.");
+    return;
   }
 
-  Local<Value> regionPoolName(regionConfiguration->Get(NanNew("poolName")));
+  Local<Value> regionPoolName(regionConfiguration->Get(Nan::New("poolName").ToLocalChecked()));
 
-  RegionShortcut regionShortcut(getRegionShortcut(*NanUtf8String(regionType)));
+  RegionShortcut regionShortcut(getRegionShortcut(*Nan::Utf8String(regionType)));
   if (regionShortcut == invalidRegionShortcut) {
-    NanThrowError("createRegion: This type is not a valid GemFire client region type");
-    NanReturnUndefined();
+    Nan::ThrowError("createRegion: This type is not a valid GemFire client region type");
+    return;
   }
 
-  Cache * cache = ObjectWrap::Unwrap<Cache>(args.This());
+  Cache * cache = Nan::ObjectWrap::Unwrap<Cache>(info.This());
   CachePtr cachePtr(cache->cachePtr);
 
   RegionPtr regionPtr;
@@ -276,106 +270,106 @@ NAN_METHOD(Cache::CreateRegion) {
     RegionFactoryPtr regionFactoryPtr(cachePtr->createRegionFactory(regionShortcut));
 
     if (!regionPoolName->IsUndefined()) {
-      regionFactoryPtr->setPoolName(*NanUtf8String(regionPoolName));
+      regionFactoryPtr->setPoolName(*Nan::Utf8String(regionPoolName));
     }
 
-    regionPtr = regionFactoryPtr->create(*NanUtf8String(args[0]));
+    regionPtr = regionFactoryPtr->create(*Nan::Utf8String(info[0]));
   } catch (const apache::geode::client::Exception & exception) {
     ThrowGemfireException(exception);
-    NanReturnUndefined();
+    return;
   }
 
-  NanReturnValue(Region::New(args.This(), regionPtr));
+  info.GetReturnValue().Set(Region::NewInstance(regionPtr));
 }
 
 NAN_METHOD(Cache::GetRegion) {
-  NanScope();
+  Nan::HandleScope scope;
 
-  if (args.Length() != 1) {
-    NanThrowError("You must pass the name of a GemFire region to getRegion.");
-    NanReturnUndefined();
+  if (info.Length() != 1) {
+    Nan::ThrowError("You must pass the name of a GemFire region to getRegion.");
+    return;
   }
 
-  if (!args[0]->IsString()) {
-    NanThrowError("You must pass a string as the name of a GemFire region to getRegion.");
-    NanReturnUndefined();
+  if (!info[0]->IsString()) {
+    Nan::ThrowError("You must pass a string as the name of a GemFire region to getRegion.");
+    return;
   }
 
-  Cache * cache = ObjectWrap::Unwrap<Cache>(args.This());
+  Cache * cache = Nan::ObjectWrap::Unwrap<Cache>(info.This());
   CachePtr cachePtr(cache->cachePtr);
-  RegionPtr regionPtr(cachePtr->getRegion(*NanAsciiString(args[0])));
+  RegionPtr regionPtr(cachePtr->getRegion(*Nan::Utf8String(info[0])));
 
-  NanReturnValue(Region::New(args.This(), regionPtr));
+  info.GetReturnValue().Set(Region::NewInstance(regionPtr));
 }
 
 NAN_METHOD(Cache::RootRegions) {
-  NanScope();
+  Nan::HandleScope scope;
 
-  Cache * cache = ObjectWrap::Unwrap<Cache>(args.This());
+  Cache * cache = Nan::ObjectWrap::Unwrap<Cache>(info.This());
 
   VectorOfRegion regions;
   cache->cachePtr->rootRegions(regions);
 
   unsigned int size = regions.size();
-  Local<Array> rootRegions(NanNew<Array>(size));
+  Local<Array> rootRegions(Nan::New<Array>(size));
 
   for (unsigned int i = 0; i < size; i++) {
-    rootRegions->Set(i, Region::New(args.This(), regions[i]));
+    rootRegions->Set(i, Region::NewInstance(regions[i]));
   }
 
-  NanReturnValue(rootRegions);
+  info.GetReturnValue().Set(rootRegions);
 }
 
 NAN_METHOD(Cache::Inspect) {
-  NanScope();
-  NanReturnValue(NanNew("[Cache]"));
+  Nan::HandleScope scope;
+  info.GetReturnValue().Set(Nan::New("[Cache]").ToLocalChecked());
 }
 
 NAN_METHOD(Cache::ExecuteFunction) {
-  NanScope();
+  Nan::HandleScope scope;
 
-  Cache * cache = ObjectWrap::Unwrap<Cache>(args.This());
+  Cache * cache = Nan::ObjectWrap::Unwrap<Cache>(info.This());
   CachePtr cachePtr(cache->cachePtr);
   if (cachePtr->isClosed()) {
-    NanThrowError("Cannot execute function; cache is closed.");
-    NanReturnUndefined();
+    Nan::ThrowError("Cannot execute function; cache is closed.");
+    return;
   }
 
-  Local<Value> poolNameValue(NanUndefined());
-  if (args[1]->IsObject() && !args[1]->IsArray()) {
-    Local<Object> optionsObject = args[1]->ToObject();
+  Local<Value> poolNameValue(Nan::Undefined());
+  if (info[1]->IsObject() && !info[1]->IsArray()) {
+    Local<Object> optionsObject = info[1]->ToObject();
 
-    Local<Value> filter = optionsObject->Get(NanNew("filter"));
+    Local<Value> filter = optionsObject->Get(Nan::New("filter").ToLocalChecked());
     if (!filter->IsUndefined()) {
-      NanThrowError("You cannot pass a filter to executeFunction for a Cache.");
-      NanReturnUndefined();
+      Nan::ThrowError("You cannot pass a filter to executeFunction for a Cache.");
+      return;
     }
 
-    poolNameValue = optionsObject->Get(NanNew("poolName"));
+    poolNameValue = optionsObject->Get(Nan::New("poolName").ToLocalChecked());
   }
 
   try {
     PoolPtr poolPtr(getPool(poolNameValue));
 
     if (poolPtr == NULLPTR) {
-      std::string poolName(*NanUtf8String(poolNameValue));
+      std::string poolName(*Nan::Utf8String(poolNameValue));
       std::stringstream errorMessageStream;
       errorMessageStream << "executeFunction: `" << poolName << "` is not a valid pool name";
-      NanThrowError(errorMessageStream.str().c_str());
-      NanReturnUndefined();
+      Nan::ThrowError(errorMessageStream.str().c_str());
+      return;
     }
 
     ExecutionPtr executionPtr(FunctionService::onServer(poolPtr));
-    NanReturnValue(executeFunction(args, cachePtr, executionPtr));
+    info.GetReturnValue().Set(executeFunction(info, cachePtr, executionPtr));
   } catch (const apache::geode::client::Exception & exception) {
     ThrowGemfireException(exception);
-    NanReturnUndefined();
+    return;
   }
 }
 
 PoolPtr Cache::getPool(const Handle<Value> & poolNameValue) {
   if (!poolNameValue->IsUndefined()) {
-    std::string poolName(*NanUtf8String(poolNameValue));
+    std::string poolName(*Nan::Utf8String(poolNameValue));
     return PoolManager::find(poolName.c_str());
   } else {
     // FIXME: Workaround for the situation where there are no regions yet.

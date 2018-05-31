@@ -19,7 +19,7 @@ using namespace apache::geode::client;
 namespace node_gemfire {
 
 std::string getClassName(const Local<Object> & v8Object) {
-  NanScope();
+   Nan::HandleScope scope;
 
   std::set<std::string> fieldNames;
   uint totalSize = 0;
@@ -28,10 +28,10 @@ std::string getClassName(const Local<Object> & v8Object) {
   unsigned int numKeys = v8Keys->Length();
   for (unsigned int i = 0; i < numKeys; i++) {
     Local<Value> v8Key(v8Keys->Get(i));
-    NanUtf8String utf8FieldName(v8Key);
+    Nan::Utf8String utf8FieldName(v8Key);
     char * fieldName = *utf8FieldName;
 
-    unsigned int size = utf8FieldName.Size();
+    unsigned int size = utf8FieldName.length();
     std::string fullFieldName;
     fullFieldName.reserve((size * 2) + 3);  // escape every character, plus '[],'
 
@@ -69,7 +69,7 @@ std::string getClassName(const Local<Object> & v8Object) {
 }
 
 std::wstring wstringFromV8String(const Local<String> & v8String) {
-  NanScope();
+  Nan::HandleScope scope;
 
   String::Value v8StringValue(v8String);
   uint16_t * v8StringData(*v8StringValue);
@@ -88,32 +88,30 @@ std::wstring wstringFromV8String(const Local<String> & v8String) {
 }
 
 Local<String> v8StringFromWstring(const std::wstring & wideString) {
-  NanEscapableScope();
+  Nan::EscapableHandleScope scope;
 
   unsigned int length = wideString.length();
-  uint16_t * buffer = new uint16_t[length + 1];
+  char * buffer = new char[length + 1];
   for (unsigned int i = 0; i < length; i++) {
     buffer[i] = wideString[i];
   }
   buffer[length] = 0;
-
-  Local<String> v8String(NanNew(buffer));
+ 
+  Local<String> v8String = Nan::New(buffer).ToLocalChecked();
   delete[] buffer;
 
-  return NanEscapeScope(v8String);
+  return scope.Escape(v8String);
 }
 
 void ConsoleWarn(const char * message) {
-  NanScope();
+   Nan::HandleScope scope;
 
-  Local<Object> global(NanGetCurrentContext()->Global());
-  Local<Function> warn(global->Get(NanNew("console"))->ToObject()->Get(NanNew("warn")).As<Function>());
-  NanCallback callback(warn);
-
-  static const int argc = 1;
-  Local<Value> argv[argc] = { NanNew(message) };
-
-  callback.Call(argc, argv);
+  auto global =Nan::GetCurrentContext()->Global();
+  auto consoleObject = global->Get( Nan::New("console").ToLocalChecked()).As<Object>();
+  auto warnFunction = consoleObject->Get(Nan::New("warn").ToLocalChecked()).As<Function>();
+  Local<Value> argv[1] = { Nan::New(message).ToLocalChecked() };
+  Nan::Callback callback(warnFunction);
+  callback.Call(1, argv);
 }
 
 CacheablePtr gemfireValue(const Local<Value> & v8Value, const CachePtr & cachePtr) {
@@ -134,7 +132,7 @@ CacheablePtr gemfireValue(const Local<Value> & v8Value, const CachePtr & cachePt
     return CacheableBoolean::create(BooleanObject::Cast(*v8Value)->BooleanValue());
 #endif
   } else if (v8Value->IsFunction()) {
-    NanThrowError("Unable to serialize to GemFire; functions are not supported.");
+    Nan::ThrowError("Unable to serialize to GemFire; functions are not supported.");
     return NULLPTR;
   } else if (v8Value->IsObject()) {
     return gemfireValue(v8Value->ToObject(), cachePtr);
@@ -144,14 +142,14 @@ CacheablePtr gemfireValue(const Local<Value> & v8Value, const CachePtr & cachePt
     return NULLPTR;
   } else {
     std::string errorMessage("Unable to serialize to GemFire; unknown JavaScript object: ");
-    errorMessage.append(*NanUtf8String(v8Value->ToDetailString()));
-    NanThrowError(errorMessage.c_str());
+    errorMessage.append(*Nan::Utf8String(v8Value->ToDetailString()));
+    Nan::ThrowError(errorMessage.c_str());
     return NULLPTR;
   }
 }
 
 PdxInstancePtr gemfireValue(const Local<Object> & v8Object, const CachePtr & cachePtr) {
-  NanEscapableScope();
+    Nan::EscapableHandleScope scope;
 
   try {
     std::string pdxClassName = getClassName(v8Object);
@@ -164,7 +162,7 @@ PdxInstancePtr gemfireValue(const Local<Object> & v8Object, const CachePtr & cac
       Local<Value> v8Key(v8Keys->Get(i));
       Local<Value> v8Value(v8Object->Get(v8Key));
 
-      NanUtf8String fieldName(v8Key);
+      Nan::Utf8String fieldName(v8Key);
 
       CacheablePtr cacheablePtr(gemfireValue(v8Value, cachePtr));
       pdxInstanceFactory->writeObject(*fieldName, cacheablePtr);
@@ -228,7 +226,7 @@ VectorOfCacheableKeyPtr gemfireKeys(const Local<Array> & v8Value,
 
 HashMapOfCacheablePtr gemfireHashMap(const Local<Object> & v8Object,
                                            const CachePtr & cachePtr) {
-  NanScope();
+  Nan::HandleScope scope;
 
   HashMapOfCacheablePtr hashMapPtr(new HashMapOfCacheable());
 
@@ -252,7 +250,7 @@ HashMapOfCacheablePtr gemfireHashMap(const Local<Object> & v8Object,
 }
 
 CacheableVectorPtr gemfireVector(const Local<Array> & v8Array, const CachePtr & cachePtr) {
-  NanScope();
+  Nan::HandleScope scope;
 
   unsigned int length = v8Array->Length();
   CacheableVectorPtr vectorPtr = CacheableVector::create();
@@ -265,54 +263,54 @@ CacheableVectorPtr gemfireVector(const Local<Array> & v8Array, const CachePtr & 
 }
 
 Local<Value> v8Value(const CacheablePtr & valuePtr) {
-  NanEscapableScope();
+ Nan::EscapableHandleScope scope;
 
   if (valuePtr == NULLPTR) {
-    return NanEscapeScope(NanNull());
+    return scope.Escape(Nan::Null());
   }
 
   int typeId = valuePtr->typeId();
   switch (typeId) {
     case GeodeTypeIds::CacheableASCIIString:
     case GeodeTypeIds::CacheableASCIIStringHuge:
-      return NanEscapeScope(NanNew((static_cast<CacheableStringPtr>(valuePtr))->asChar()));
+      return scope.Escape(Nan::New((static_cast<CacheableStringPtr>(valuePtr))->asChar()).ToLocalChecked());
     case GeodeTypeIds::CacheableString:
     case GeodeTypeIds::CacheableStringHuge:
-      return NanEscapeScope(v8StringFromWstring((static_cast<CacheableStringPtr>(valuePtr))->asWChar()));
+      return scope.Escape(v8StringFromWstring((static_cast<CacheableStringPtr>(valuePtr))->asWChar()));
     case GeodeTypeIds::CacheableBoolean:
-      return NanEscapeScope(NanNew((static_cast<CacheableBooleanPtr>(valuePtr))->value()));
+      return scope.Escape(Nan::New((static_cast<CacheableBooleanPtr>(valuePtr))->value()));
     case GeodeTypeIds::CacheableDouble:
-      return NanEscapeScope(NanNew((static_cast<CacheableDoublePtr>(valuePtr))->value()));
+      return scope.Escape(Nan::New((static_cast<CacheableDoublePtr>(valuePtr))->value()));
     case GeodeTypeIds::CacheableFloat:
-      return NanEscapeScope(NanNew((static_cast<CacheableFloatPtr>(valuePtr))->value()));
+      return scope.Escape(Nan::New((static_cast<CacheableFloatPtr>(valuePtr))->value()));
     case GeodeTypeIds::CacheableInt16:
-      return NanEscapeScope(NanNew((static_cast<CacheableInt16Ptr>(valuePtr))->value()));
+      return scope.Escape(Nan::New((static_cast<CacheableInt16Ptr>(valuePtr))->value()));
     case GeodeTypeIds::CacheableInt32:
-      return NanEscapeScope(NanNew((static_cast<CacheableInt32Ptr>(valuePtr))->value()));
+      return scope.Escape(Nan::New((static_cast<CacheableInt32Ptr>(valuePtr))->value()));
     case GeodeTypeIds::CacheableInt64:
-      return NanEscapeScope(v8Value(static_cast<CacheableInt64Ptr>(valuePtr)));
+      return scope.Escape(v8Value(static_cast<CacheableInt64Ptr>(valuePtr)));
     case GeodeTypeIds::CacheableDate:
-      return NanEscapeScope(v8Value(static_cast<CacheableDatePtr>(valuePtr)));
+      return scope.Escape(v8Value(static_cast<CacheableDatePtr>(valuePtr)));
     case GeodeTypeIds::CacheableUndefined:
-      return NanEscapeScope(NanUndefined());
+      return scope.Escape(Nan::Undefined());
     case GeodeTypeIds::Struct:
-      return NanEscapeScope(v8Value(static_cast<StructPtr>(valuePtr)));
+      return scope.Escape(v8Value(static_cast<StructPtr>(valuePtr)));
     case GeodeTypeIds::CacheableObjectArray:
-      return NanEscapeScope(v8Array(static_cast<CacheableObjectArrayPtr>(valuePtr)));
+      return scope.Escape(v8Array(static_cast<CacheableObjectArrayPtr>(valuePtr)));
     case GeodeTypeIds::CacheableArrayList:
-      return NanEscapeScope(v8Array(static_cast<CacheableArrayListPtr>(valuePtr)));
+      return scope.Escape(v8Array(static_cast<CacheableArrayListPtr>(valuePtr)));
     case GeodeTypeIds::CacheableVector:
-      return NanEscapeScope(v8Array(static_cast<CacheableVectorPtr>(valuePtr)));
+      return scope.Escape(v8Array(static_cast<CacheableVectorPtr>(valuePtr)));
     case GeodeTypeIds::CacheableHashMap:
-      return NanEscapeScope(v8Object(static_cast<CacheableHashMapPtr>(valuePtr)));
+      return scope.Escape(v8Object(static_cast<CacheableHashMapPtr>(valuePtr)));
     case GeodeTypeIds::CacheableHashSet:
-      return NanEscapeScope(v8Array(static_cast<CacheableHashSetPtr>(valuePtr)));
+      return scope.Escape(v8Array(static_cast<CacheableHashSetPtr>(valuePtr)));
     case 0:
       try {
         UserFunctionExecutionExceptionPtr functionExceptionPtr =
           static_cast<UserFunctionExecutionExceptionPtr>(valuePtr);
 
-        return NanEscapeScope(v8Error(functionExceptionPtr));
+        return scope.Escape(v8Error(functionExceptionPtr));
       } catch (ClassCastException & exception) {
         // fall through to default error case
       }
@@ -321,26 +319,26 @@ Local<Value> v8Value(const CacheablePtr & valuePtr) {
 
   if (typeId > GeodeTypeIds::CacheableStringHuge) {
     // We are assuming these are Pdx
-    return NanEscapeScope(v8Value(static_cast<PdxInstancePtr>(valuePtr)));
+    return scope.Escape(v8Value(static_cast<PdxInstancePtr>(valuePtr)));
   }
 
   std::stringstream errorMessageStream;
   errorMessageStream << "Unable to serialize value from GemFire; unknown typeId: " << typeId;
-  NanThrowError(errorMessageStream.str().c_str());
-  return NanEscapeScope(NanUndefined());
+  Nan::ThrowError(errorMessageStream.str().c_str());
+  return scope.Escape(Nan::Undefined());
 }
 
 Local<Value> v8Value(const PdxInstancePtr & pdxInstance) {
-  NanEscapableScope();
+  Nan::EscapableHandleScope scope;
 
   try {
     CacheableStringArrayPtr gemfireKeys(pdxInstance->getFieldNames());
 
     if (gemfireKeys == NULLPTR) {
-      return NanEscapeScope(NanNew<Object>());
+      return scope.Escape(Nan::New<Object>());
     }
 
-    Local<Object> v8Object(NanNew<Object>());
+    Local<Object> v8Object(Nan::New<Object>());
     int length = gemfireKeys->length();
 
     for (int i = 0; i < length; i++) {
@@ -355,19 +353,20 @@ Local<Value> v8Value(const PdxInstancePtr & pdxInstance) {
       } else {
         pdxInstance->getField(key, value);
       }
-      v8Object->Set(NanNew(key), v8Value(value));
+      Nan::Set(v8Object, Nan::New(key).ToLocalChecked(),v8Value(value)); 
     }
 
-    return NanEscapeScope(v8Object);
+    return scope.Escape(v8Object);
   }
   catch(const apache::geode::client::Exception & exception) {
     ThrowGemfireException(exception);
-    return NanEscapeScope(NanUndefined());
+    Nan::EscapableHandleScope scope;
+    return scope.Escape(Nan::Undefined());
   }
 }
 
 Local<Value> v8Value(const CacheableInt64Ptr & valuePtr) {
-  NanEscapableScope();
+   Nan::EscapableHandleScope scope;
 
   static const int64_t maxSafeInteger = pow(2, 53) - 1;
   static const int64_t minSafeInteger = -1 * maxSafeInteger;
@@ -379,15 +378,13 @@ Local<Value> v8Value(const CacheableInt64Ptr & valuePtr) {
     ConsoleWarn("Received 64 bit integer from GemFire less than Number.MIN_SAFE_INTEGER (-1 * 2^53 + 1)");
   }
 
-  return NanEscapeScope(NanNew<Number>(value));
+  return scope.Escape(Nan::New<Number>(value));
 }
 
 Local<Date> v8Value(const CacheableDatePtr & datePtr) {
-  NanEscapableScope();
-
+  Nan::EscapableHandleScope scope;
   double epochMillis = datePtr->milliseconds();
-
-  return NanEscapeScope(NanNew<Date>(epochMillis));
+  return scope.Escape(Nan::New<Date>(epochMillis).ToLocalChecked());
 }
 
 
@@ -396,17 +393,13 @@ Local<Value> v8Value(const CacheableKeyPtr & keyPtr) {
 }
 
 Local<Object> v8Value(const StructPtr & structPtr) {
-  NanEscapableScope();
-
-  Local<Object> v8Object(NanNew<Object>());
-
+  Nan::EscapableHandleScope scope;
+  Local<Object> v8Object(Nan::New<Object>());
   unsigned int length = structPtr->length();
   for (unsigned int i = 0; i < length; i++) {
-    v8Object->Set(NanNew(structPtr->getFieldName(i)),
-                  v8Value((*structPtr)[i]));
+    Nan::Set(v8Object, Nan::New(structPtr->getFieldName(i)).ToLocalChecked(), v8Value((*structPtr)[i]));
   }
-
-  return NanEscapeScope(v8Object);
+  return scope.Escape(v8Object);
 }
 
 Local<Object> v8Value(const HashMapOfCacheablePtr & hashMapPtr) {
@@ -422,40 +415,34 @@ Local<Array> v8Value(const VectorOfCacheableKeyPtr & vectorPtr) {
 }
 
 Local<Object> v8Value(const RegionEntryPtr & regionEntryPtr) {
-  NanEscapableScope();
-
-  Local<Object> v8Object(NanNew<Object>());
-
-  v8Object->Set(NanNew<String>("key"), v8Value(regionEntryPtr->getKey()));
-  v8Object->Set(NanNew<String>("value"), v8Value(regionEntryPtr->getValue()));
-
-  return NanEscapeScope(v8Object);
+  Nan::EscapableHandleScope scope;
+  Local<Object> v8Object(Nan::New<Object>());
+  Nan::Set(v8Object, Nan::New("key").ToLocalChecked(), v8Value(regionEntryPtr->getKey()));
+  Nan::Set(v8Object, Nan::New("value").ToLocalChecked(), v8Value(regionEntryPtr->getValue()));
+  return scope.Escape(v8Object);
 }
 
 Local<Array> v8Value(const VectorOfRegionEntry & vectorOfRegionEntries) {
-  NanEscapableScope();
-
-  Local<Array> v8Array(NanNew<Array>());
-
+  Nan::EscapableHandleScope scope;
+  Local<Array> v8Array(Nan::New<Array>());
   unsigned int length = vectorOfRegionEntries.length();
   for (unsigned int i = 0; i < length; i++) {
-    v8Array->Set(i, v8Value(vectorOfRegionEntries[i]));
+    Nan::Set(v8Array, i, v8Value(vectorOfRegionEntries[i]));
   }
-
-  return NanEscapeScope(v8Array);
+  return scope.Escape(v8Array);
 }
 
 Local<Object> v8Value(const SelectResultsPtr & selectResultsPtr) {
-  NanEscapableScope();
+  Nan::EscapableHandleScope scope;
 
   Local<Object> selectResults(SelectResults::NewInstance(selectResultsPtr));
 
-  return NanEscapeScope(selectResults);
+  return scope.Escape(selectResults);
 }
 
 Local<Boolean> v8Value(bool value) {
-  NanEscapableScope();
-  return NanEscapeScope(NanNew(value));
+  Nan::EscapableHandleScope scope;
+  return scope.Escape(Nan::New(value));
 }
 
 }  // namespace node_gemfire

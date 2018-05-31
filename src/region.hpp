@@ -9,24 +9,19 @@
 
 namespace node_gemfire {
 
-class Region : public node::ObjectWrap {
+class Region : public Nan::ObjectWrap {
+
  public:
-  Region(v8::Local<v8::Object> regionHandle,
-         v8::Local<v8::Object> cacheHandle,
-         apache::geode::client::RegionPtr regionPtr) :
-    regionPtr(regionPtr) {
-      Wrap(regionHandle);
-      NanAssignPersistent(this->cacheHandle, cacheHandle);
-    }
+  Region(apache::geode::client::RegionPtr regionPtr) :
+    regionPtr(regionPtr) {}
 
   virtual ~Region() {
     RegionEventRegistry::getInstance()->remove(this);
-    NanDisposePersistent(cacheHandle);
   }
 
-  static void Init(v8::Local<v8::Object> exports);
-  static v8::Local<v8::Value> New(v8::Local<v8::Object> cacheObject,
-                                  apache::geode::client::RegionPtr regionPtr);
+  static NAN_MODULE_INIT(Init);
+  static v8::Local<v8::Object> NewInstance(apache::geode::client::RegionPtr);
+
   static NAN_METHOD(Clear);
   static NAN_METHOD(Put);
   static NAN_METHOD(PutSync);
@@ -55,9 +50,12 @@ class Region : public node::ObjectWrap {
 
   apache::geode::client::RegionPtr regionPtr;
 
- private:
-  v8::Persistent<v8::Object> cacheHandle;
-  static v8::Persistent<v8::Function> constructor;
+  private:
+    static inline Nan::Persistent<v8::Function> & constructor() {
+      static Nan::Persistent<v8::Function> my_constructor;
+      return my_constructor;
+    }
+
 };
 
 }  // namespace node_gemfire

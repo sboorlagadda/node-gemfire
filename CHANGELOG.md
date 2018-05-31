@@ -51,7 +51,7 @@
 # v0.0.7
 
 - Require GemFire Native Client 8.0.0.1 or later
-- Add workaround for issue where `cache.executeFunction()` throws `gemfire::NullPointerException` if no regions have been defined in the XML configuration.
+- Add workaround for issue where `cache.executeFunction()` throws `apache::geode::client::NullPointerException` if no regions have been defined in the XML configuration.
 - Fix issue where arrays would sometimes come back from GemFire as corrupted non-array objects.
 
 # v0.0.6
@@ -60,7 +60,7 @@
 
 # v0.0.5
 
-- Fix issue where some arrays would throw `gemfire::OutOfBoundsException` when attached to an object retrieved from GemFire.
+- Fix issue where some arrays would throw `apache::geode::client::OutOfBoundsException` when attached to an object retrieved from GemFire.
 
 # v0.0.4
 

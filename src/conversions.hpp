@@ -46,10 +46,10 @@ v8::Local<v8::Boolean> v8Value(bool value);
 
 template<typename T>
 v8::Local<v8::Array> v8Array(const apache::geode::client::SharedPtr<T> & iterablePtr) {
-  NanEscapableScope();
+  Nan::EscapableHandleScope scope;
 
   unsigned int length = iterablePtr->size();
-  v8::Local<v8::Array> v8Array(NanNew<v8::Array>(length));
+  v8::Local<v8::Array> v8Array(Nan::New<v8::Array>(length));
 
   unsigned int i = 0;
   for (typename T::Iterator iterator(iterablePtr->begin());
@@ -59,14 +59,13 @@ v8::Local<v8::Array> v8Array(const apache::geode::client::SharedPtr<T> & iterabl
     i++;
   }
 
-  return NanEscapeScope(v8Array);
+  return scope.Escape(v8Array);
 }
 
 template<typename T>
 v8::Local<v8::Object> v8Object(const apache::geode::client::SharedPtr<T> & hashMapPtr) {
-  NanEscapableScope();
-
-  v8::Local<v8::Object> v8Object(NanNew<v8::Object>());
+  Nan::EscapableHandleScope scope;
+  v8::Local<v8::Object> v8Object(Nan::New<v8::Object>());
 
   for (typename T::Iterator iterator = hashMapPtr->begin();
        iterator != hashMapPtr->end();
@@ -78,7 +77,7 @@ v8::Local<v8::Object> v8Object(const apache::geode::client::SharedPtr<T> & hashM
         v8Value(valuePtr));
   }
 
-  return NanEscapeScope(v8Object);
+  return scope.Escape(v8Object);
 }
 
 std::string getClassName(const v8::Local<v8::Object> & v8Object);

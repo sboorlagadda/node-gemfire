@@ -7,7 +7,7 @@
 
 namespace node_gemfire {
 
-v8::Local<v8::Value> executeFunction(_NAN_METHOD_ARGS,
+v8::Local<v8::Value> executeFunction(Nan::NAN_METHOD_ARGS_TYPE info,
                                      const apache::geode::client::CachePtr & cachePtr,
                                      const apache::geode::client::ExecutionPtr & executionPtr);
 

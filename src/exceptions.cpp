@@ -7,25 +7,22 @@ using namespace apache::geode::client;
 namespace node_gemfire {
 
 Local<Value> v8Error(const apache::geode::client::Exception & exception) {
-  NanEscapableScope();
+  Nan::EscapableHandleScope scope;
 
-  Local<Object> error(NanError(exception.getMessage())->ToObject());
-  error->Set(NanNew("name"), NanNew(exception.getName()));
-
-  return NanEscapeScope(error);
+  Local<Object> error  = Nan::Error(exception.getMessage())->ToObject();
+  Nan::Set(error, Nan::New("name").ToLocalChecked(),Nan::New(exception.getName()).ToLocalChecked()); 
+  return scope.Escape(error);
 }
 
 Local<Value> v8Error(const UserFunctionExecutionExceptionPtr & exceptionPtr) {
-  NanEscapableScope();
+  Nan::EscapableHandleScope scope;
+  Local<Object> error = Nan::Error(exceptionPtr->getMessage()->asChar())->ToObject();
 
-  Local<Object> error(NanError(exceptionPtr->getMessage()->asChar())->ToObject());
-  error->Set(NanNew("name"), NanNew(exceptionPtr->getName()->asChar()));
-
-  return NanEscapeScope(error);
+  return scope.Escape(error);
 }
 
 void ThrowGemfireException(const apache::geode::client::Exception & e) {
-  NanThrowError(v8Error(e));
+  Nan::ThrowError(v8Error(e));
 }
 
 }  // namespace node_gemfire

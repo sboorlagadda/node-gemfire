@@ -14,5 +14,5 @@ fi
 
 export PATH="~/.rbenv/bin:$PATH"
 eval "$(rbenv init -)"
-rbenv download 2.2.1
-rbenv global 2.2.1
+rbenv download 2.4.2
+rbenv global 2.4.2
