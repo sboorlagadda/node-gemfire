@@ -55,7 +55,17 @@ NAN_METHOD(Cache::New) {
     Nan::ThrowError("Cache constructor requires a path to an XML configuration file as its first argument.");
     return;
   }
-  CacheFactoryPtr cacheFactory(CacheFactory::createCacheFactory());
+  CacheFactoryPtr cacheFactory;
+
+  if(info.Length() >1){
+    // first param is the XML file and the second is the properties.
+    PropertiesPtr gemfireProperties = Properties::create();
+    gemfireProperties->load(*Nan::Utf8String(info[1]));
+    cacheFactory = CacheFactory::createCacheFactory(gemfireProperties);
+  } else {
+    cacheFactory = CacheFactory::createCacheFactory();
+  }
+
   cacheFactory->set("cache-xml-file", *Nan::Utf8String(info[0]));
   cacheFactory->setSubscriptionEnabled(true);
 
@@ -143,10 +153,8 @@ NAN_METHOD(Cache::ExecuteQuery) {
   Local<Value> poolNameValue(Nan::Undefined());
   Local<Value> queryParams;
 
-  // .executeQuery(query, function)
   if (info[1]->IsFunction()) {
     callbackFunction = info[1].As<Function>();
-    // .executeQuery(query, optionsHash, function)
   } else if (argsLength > 2 && info[2]->IsFunction()) {
     callbackFunction = info[2].As<Function>();
 
@@ -154,7 +162,6 @@ NAN_METHOD(Cache::ExecuteQuery) {
       Local<Object> optionsObject = info[1]->ToObject();
       poolNameValue = optionsObject->Get(Nan::New("poolName").ToLocalChecked());
     }
-    // .executeQuery(query, paramsArray, optionsHash, function)
   } else if (argsLength > 3 && info[3]->IsFunction()) {
     callbackFunction = info[3].As<Function>();
 
