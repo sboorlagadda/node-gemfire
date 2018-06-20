@@ -74,13 +74,12 @@ For more information, please see the full [API documentation](doc/api.md).
 
 ### Setup
 
-## Prerequisites
+#### Downloads
 
 Download the following packages from [Pivotal Network](https://network.pivotal.io/products/pivotal-gemfire) and copy to node-gemfire/tmp directory
 
 * pivotal-gemfire-9.4.0.zip
 * pivotal-gemfire-native-9.2.0-build.10-Linux-64bit.tar.gz
-
 
 To build the VM:
 
