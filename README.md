@@ -11,15 +11,13 @@ NodeJS client for Pivotal GemFire
 
 ## Tested node.js runtime versions
 
-* 0.12.7
-* 0.11.16
-* 0.10.40
+* 8.11.3
 
 ## Installation
 
 ### Prerequisites
 
-1. Download and install the GemFire 8.1.0.0 Native Client for your platform from [Pivotal Network](https://network.pivotal.io/products/pivotal-gemfire).
+1. Download and install the GemFire 9.2.0 Native Client for your platform from [Pivotal Network](https://network.pivotal.io/products/pivotal-gemfire).
 2. Set the environment variables described by the [GemFire Native Client installation instructions](http://gemfire.docs.pivotal.io/latest/userguide/index.html#gemfire_nativeclient/introduction/install-overview.html) for your platform.
 
 ### Installing the NPM package
@@ -41,6 +39,7 @@ Here is an example file that turns off statistics collection, sets the "warning"
 statistic-sampling-enabled=false
 log-level=warning
 log-file=log/gemfire.log
+statistic-archive-file=tmp/gfcpp.gfs
 ```
 
 You can see the available options for `gfcpp.properties` in the [GemFire documentation](http://gemfire.docs.pivotal.io/latest/userguide/gemfire_nativeclient/setting-properties/attributes-gfcpp.html).

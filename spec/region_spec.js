@@ -726,7 +726,7 @@ describe("gemfire.Region", function() {
 
         until(
           function(test) { region.get("foo", test); },
-          function(error, result) { return result === null },
+          function(error, result) { return result === null; },
           done
         );
       });
@@ -1005,7 +1005,7 @@ describe("gemfire.Region", function() {
 
         until(
           function(test) { region.get("foo", test); },
-          function(error, result) { return result === null },
+          function(error, result) { return result === null; },
           done
         );
       });
