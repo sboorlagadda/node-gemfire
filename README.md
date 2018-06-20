@@ -13,6 +13,11 @@ NodeJS client for Pivotal GemFire
 
 * 8.11.3
 
+## Tested GemFire versions
+
+* pivotal-gemfire-9.4.0
+* pivotal-gemfire-native-client-9.2.0
+
 ## Installation
 
 ### Prerequisites
@@ -39,7 +44,6 @@ Here is an example file that turns off statistics collection, sets the "warning"
 statistic-sampling-enabled=false
 log-level=warning
 log-file=log/gemfire.log
-statistic-archive-file=tmp/gfcpp.gfs
 ```
 
 You can see the available options for `gfcpp.properties` in the [GemFire documentation](http://gemfire.docs.pivotal.io/latest/userguide/gemfire_nativeclient/setting-properties/attributes-gfcpp.html).
@@ -69,6 +73,14 @@ For more information, please see the full [API documentation](doc/api.md).
 * [Vagrant 1.6.x or later](http://www.vagrantup.com/)
 
 ### Setup
+
+## Prerequisites
+
+Download the following packages from [Pivotal Network](https://network.pivotal.io/products/pivotal-gemfire) and copy to node-gemfire/tmp directory
+
+* pivotal-gemfire-9.4.0.zip
+* pivotal-gemfire-native-9.2.0-build.10-Linux-64bit.tar.gz
+
 
 To build the VM:
 
