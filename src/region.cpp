@@ -191,9 +191,9 @@ NAN_METHOD(Region::PutSync) {
 
   try{
     unsigned int argsLength = info.Length();
-
     if (argsLength != 2) {
       Nan::ThrowError("You must pass a key and value to putSync().");
+      info.GetReturnValue().Set(Nan::Undefined());
       return;
     }
 
@@ -201,27 +201,28 @@ NAN_METHOD(Region::PutSync) {
 
     CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
     if (cachePtr == NULLPTR) {
+      info.GetReturnValue().Set(Nan::Undefined());
       return;
     }
 
     CacheableKeyPtr keyPtr(gemfireKey(info[0], cachePtr));
-    CacheablePtr valuePtr(gemfireValue(info[1], cachePtr));
-
     if (keyPtr == NULLPTR) {
       Nan::ThrowError("Invalid GemFire key.");
+      info.GetReturnValue().Set(Nan::Undefined());
       return;
     }
 
+    CacheablePtr valuePtr(gemfireValue(info[1], cachePtr));
     if (valuePtr == NULLPTR) {
       Nan::ThrowError("Invalid GemFire value.");
+      info.GetReturnValue().Set(Nan::Undefined());
       return;
     }
+
     region->regionPtr->put(keyPtr, valuePtr);
     info.GetReturnValue().Set(info.Holder());
   } catch(apache::geode::client::Exception & exception) {
-    std::string msg(exception.getName());
-    msg.append(" ").append(exception.getMessage());
-    Nan::ThrowError(msg.c_str());
+    ThrowGemfireException(exception);
     info.GetReturnValue().Set(Nan::Undefined());
   }
 }
@@ -296,31 +297,28 @@ NAN_METHOD(Region::Get) {
 
 NAN_METHOD(Region::GetSync) {
   Nan::HandleScope scope;
+  CacheablePtr valuePtr = NULLPTR;
+  try{
+    unsigned int argsLength = info.Length();
+    if (argsLength == 0) {
+      Nan::ThrowError("You must pass a key to getSync().");
+      info.GetReturnValue().Set(Nan::Undefined());
+      return;
+    }
 
-  unsigned int argsLength = info.Length();
+    Region * region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+    RegionPtr regionPtr(region->regionPtr);
 
-  if (argsLength == 0) {
-    Nan::ThrowError("You must pass a key to getSync().");
-    return;
+    CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
+    if (cachePtr == NULLPTR) {
+      info.GetReturnValue().Set(Nan::Undefined());
+      return;
+    }
+    CacheableKeyPtr keyPtr(gemfireKey(info[0], cachePtr));
+    valuePtr = regionPtr->get(keyPtr);
+  } catch(apache::geode::client::Exception & exception) {
+    ThrowGemfireException(exception);
   }
-
-  Region * region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  RegionPtr regionPtr(region->regionPtr);
-
-  CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
-  if (cachePtr == NULLPTR) {
-    return;
-  }
-
-  CacheableKeyPtr keyPtr(gemfireKey(info[0], cachePtr));
-  CacheablePtr valuePtr = regionPtr->get(keyPtr);
-  //TODO switching up behavior - don't throw error on key not found
-  /*
-  if (valuePtr == NULLPTR) {
-    Nan::ThrowError("Key not found in region.");
-  }
-  */
-
   info.GetReturnValue().Set(v8Value(valuePtr));
 }
 
@@ -400,36 +398,37 @@ NAN_METHOD(Region::GetAll) {
 
 NAN_METHOD(Region::GetAllSync) {
   Nan::HandleScope scope;
+  try{
+    if (info.Length() != 1 || !info[0]->IsArray()) {
+      Nan::ThrowError("You must pass an array of keys to getAllSync().");
+      info.GetReturnValue().Set(Nan::Undefined());
+      return;
+    }
+    Region * region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+    RegionPtr regionPtr(region->regionPtr);
+    CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
 
-  if (info.Length() != 1 || !info[0]->IsArray()) {
-    Nan::ThrowError("You must pass an array of keys to getAllSync().");
+    if (cachePtr == NULLPTR) {
+      info.GetReturnValue().Set(Nan::Undefined());
+      return;
+    }
+
+    VectorOfCacheableKeyPtr gemfireKeysPtr(gemfireKeys(Local<Array>::Cast(info[0]), cachePtr));
+    if (gemfireKeysPtr == NULLPTR) {
+      Nan::ThrowError("Invalid GemFire key.");
+      info.GetReturnValue().Set(Nan::Undefined());
+      return;
+    }
+    HashMapOfCacheablePtr resultsPtr(new HashMapOfCacheable());
+    if (gemfireKeysPtr->size() == 0) {
+      info.GetReturnValue().Set(v8Object(resultsPtr));
+    }else{
+      regionPtr->getAll(*gemfireKeysPtr, resultsPtr, NULLPTR);
+      info.GetReturnValue().Set(v8Value(resultsPtr));
+    }
+  } catch(apache::geode::client::Exception & exception) {
+    ThrowGemfireException(exception);
     info.GetReturnValue().Set(Nan::Undefined());
-    return;
-  }
-
-  Region * region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  RegionPtr regionPtr(region->regionPtr);
-
-  CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
-  if (cachePtr == NULLPTR) {
-    info.GetReturnValue().Set(Nan::Undefined());
-    return;
-  }
-
-  VectorOfCacheableKeyPtr gemfireKeysPtr(gemfireKeys(Local<Array>::Cast(info[0]), cachePtr));
-
-  if (gemfireKeysPtr == NULLPTR) {
-    Nan::ThrowError("Invalid GemFire key.");
-    info.GetReturnValue().Set(Nan::Undefined());
-    return;
-  }
-
-  HashMapOfCacheablePtr resultsPtr(new HashMapOfCacheable());
-  if (gemfireKeysPtr->size() == 0) {
-    info.GetReturnValue().Set(v8Object(resultsPtr));
-  }else{
-    regionPtr->getAll(*gemfireKeysPtr, resultsPtr, NULLPTR);
-    info.GetReturnValue().Set(v8Value(resultsPtr));
   }
 }
 
@@ -485,23 +484,25 @@ NAN_METHOD(Region::PutAll) {
 
 NAN_METHOD(Region::PutAllSync) {
   Nan::HandleScope scope;
-
-  if (info.Length() != 1 || !info[0]->IsObject()) {
-    Nan::ThrowError("You must pass an object to putAllSync().");
-    return;
-  }
-
-  Region * region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  RegionPtr regionPtr(region->regionPtr);
-
-  CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
-  if (cachePtr == NULLPTR) {
-    return;
-  }
   try{
+    if (info.Length() != 1 || !info[0]->IsObject()) {
+      Nan::ThrowError("You must pass an object to putAllSync().");
+      info.GetReturnValue().Set(Nan::Undefined());
+      return;
+    }
+
+    Region * region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+    RegionPtr regionPtr(region->regionPtr);
+
+    CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
+    if (cachePtr == NULLPTR) {
+      info.GetReturnValue().Set(Nan::Undefined());
+      return;
+    }
     HashMapOfCacheablePtr hashMapPtr(gemfireHashMap(info[0]->ToObject(), cachePtr));
     if (hashMapPtr == NULLPTR) {
       Nan::ThrowError("Invalid GemFire value.");
+      info.GetReturnValue().Set(Nan::Undefined());
       return;
     }
     regionPtr->putAll(*hashMapPtr);

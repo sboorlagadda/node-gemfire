@@ -80,9 +80,7 @@ module.exports = function itDestroysTheRegion(methodName) {
       expect(error).not.toBeError();
       expect(function(){ 
         region.putSync("foo", "bar"); 
-      }).toThrow(
-          new Error("apache::geode::client::RegionDestroyedException Region::put: Named Region Destroyed")
-      );
+      }).toBeError();
       done();
     });
   });
@@ -92,9 +90,7 @@ module.exports = function itDestroysTheRegion(methodName) {
       expect(error).not.toBeError();
       expect(function(){
         otherCopyOfRegion.putSync("foo", "bar");
-      }).toThrow(
-        new Error("apache::geode::client::RegionDestroyedException Region::put: Named Region Destroyed")
-      );
+      }).toBeError();
       done();
     });
   });
