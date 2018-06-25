@@ -11,15 +11,18 @@ NodeJS client for Pivotal GemFire
 
 ## Tested node.js runtime versions
 
-* 0.12.7
-* 0.11.16
-* 0.10.40
+* 8.11.3
+
+## Tested GemFire versions
+
+* pivotal-gemfire-9.4.0
+* pivotal-gemfire-native-client-9.2.0
 
 ## Installation
 
 ### Prerequisites
 
-1. Download and install the GemFire 8.1.0.0 Native Client for your platform from [Pivotal Network](https://network.pivotal.io/products/pivotal-gemfire).
+1. Download and install the GemFire 9.2.0 Native Client for your platform from [Pivotal Network](https://network.pivotal.io/products/pivotal-gemfire).
 2. Set the environment variables described by the [GemFire Native Client installation instructions](http://gemfire.docs.pivotal.io/latest/userguide/index.html#gemfire_nativeclient/introduction/install-overview.html) for your platform.
 
 ### Installing the NPM package
@@ -70,6 +73,13 @@ For more information, please see the full [API documentation](doc/api.md).
 * [Vagrant 1.6.x or later](http://www.vagrantup.com/)
 
 ### Setup
+
+#### Downloads
+
+Download the following packages from [Pivotal Network](https://network.pivotal.io/products/pivotal-gemfire) and copy to node-gemfire/tmp directory
+
+* pivotal-gemfire-9.4.0.zip
+* pivotal-gemfire-native-9.2.0-build.10-Linux-64bit.tar.gz
 
 To build the VM:
 

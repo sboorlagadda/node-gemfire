@@ -1,12 +1,18 @@
 #!/bin/sh
 
-echo ****************************
-echo ****** Installing GDB ******
-echo ****************************
+echo "****************************************************"
+echo "****** Validating GDB pretty printers support ******"
+echo "****************************************************"
 
 set -e
 
-sh -c "cat > ~/.gdbinit" <<'EOF'
+VERSION=`cat ~/.gdbinit | grep gppfs-0.2 | wc -l`
+
+if [ "$VERSION" != "1" ]; then
+  echo "*********************************************"
+  echo "****** GDB pretty printers for STLport ******"
+  echo "*********************************************"
+  sh -c "cat > ~/.gdbinit" <<'EOF'
 python
 import sys
 
@@ -20,3 +26,4 @@ stlport.printers.register_stlport_printers (None)
 
 end
 EOF
+fi
