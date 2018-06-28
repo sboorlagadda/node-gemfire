@@ -47,11 +47,12 @@
         "src/binding.cpp"
       ]
     },
-    {
-       "target_name": "test",
-       "libraries": [ "-lgtest" ],
-        "sources": [ "spec/cpp/test.cpp", ],
-    },
+	# Remove because this will fail if nodejs source not installed
+    #{
+    #   "target_name": "test",
+    #   "libraries": [ "-lgtest" ],
+    #    "sources": [ "spec/cpp/test.cpp", ],
+    #},
     {
       "target_name": "action_after_build",
       "type": "none",

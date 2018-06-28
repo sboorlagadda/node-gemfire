@@ -16,7 +16,7 @@ if [ ! -d "lib/binding/Release/node-v57-linux-x64" ]; then
   echo "*************************************"
   echo "****** Installing Node GemFire ******"
   echo "*************************************"
-  npm install-test
+  npm install
 fi
 
 BUNDLER=`gem list | grep "bundler (1.16.2)" | wc -l`
