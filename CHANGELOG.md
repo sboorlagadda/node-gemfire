@@ -1,3 +1,8 @@
+# v0.2.00
+- Update to GemFire 9.2
+- Update to Node 8.11.3
+- Add CacheFactory to enable developer to dynamically create the connection to the distributed system.
+
 # v0.1.19
 - Use ForceSet instead of Set to allow for node 0.11.x+ compatibility
 

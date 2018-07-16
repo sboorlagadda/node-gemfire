@@ -1,7 +1,7 @@
 {
   "name": "gemfire",
-  "version": "0.1.19",
-  "description": "Pivotal GemFire client",
+  "version": "0.2.0",
+  "description": "Pivotal GemFire Client",
   "main": "./lib",
   "files": [
     "lib/**/*.js",
@@ -43,11 +43,19 @@
     {
       "name": "Aaron Triantafyllidis",
       "url": "https://github.com/azzamallow"
+    },
+    {
+      "name": "Charlie Black",
+      "url": "https://github.com/charliemblack"
+    },
+    {
+      "name": "Paul Vermeulen",
+      "url": "https://github.com/pvermeulen-pivotal"
     }
   ],
   "repository": {
     "type": "git",
-    "url": "git@github.com:pivotal/nodejs-gemfire-poc.git"
+    "url": "git@github.com:gemfire/node-gemfire.git"
   },
   "binary": {
     "module_name": "gemfire",

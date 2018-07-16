@@ -10,7 +10,9 @@ cd /vagrant
 
 if [ ! -d "tmp/gemfire" ]; then
   mkdir tmp/gemfire
+  echo "export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64" >>~/.bashrc
 fi
+
 
 if [ ! -d "lib/binding/Release/node-v57-linux-x64" ]; then
   echo "*************************************"
@@ -19,12 +21,13 @@ if [ ! -d "lib/binding/Release/node-v57-linux-x64" ]; then
   npm install
 fi
 
+
 BUNDLER=`gem list | grep "bundler (1.16.2)" | wc -l`
 if [ "$BUNDLER" != "1" ]; then 
   echo "********************************"
   echo "****** Installing Bundler ******"
   echo "********************************"
-  gem install bundler
+  sudo gem install bundler
 fi  
   
 rbenv rehash
@@ -34,16 +37,8 @@ if [ "$BUNDLE" != "1" ]; then
   echo "*******************************"
   echo "****** Installing bundle ******"
   echo "*******************************"
-  bundle install
+  sudo bundle install
 fi
-
-NPM=`npm version | grep "npm: '6.1.0'" | wc -l`
-if [ "$NPM" != "1" ]; then
-  echo "****************************"
-  echo "****** Installing NPM ******"
-  echo "****************************"
-  npm install -g npm@6
-fi 
 
 echo ""
 echo ""

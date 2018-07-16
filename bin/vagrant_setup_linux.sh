@@ -1,48 +1,73 @@
 #!/bin/bash
-GEMFIRE_SERVER_FILENAME="pivotal-gemfire-9.4.0.zip"
-GEMFIRE_DIRECTORY="/opt/pivotal/gemfire/pivotal-gemfire-9.4.0"
+
+GEMFIRE_VERSION=9.5.1
+NATIVE_CLIENT_VERSION=9.2.0
+GEMFIRE_SERVER_FILENAME="pivotal-gemfire-${GEMFIRE_VERSION}.zip"
+GEMFIRE_DIRECTORY="/opt/pivotal/gemfire/pivotal-gemfire-${GEMFIRE_VERSION}"
 GEMFIRE_LINK_DIRECTORY="/opt/pivotal/gemfire/Pivotal_GemFire"
 
-NATIVE_CLIENT_FILENAME="pivotal-gemfire-native-9.2.0-build.10-Linux-64bit.tar.gz"
+NATIVE_CLIENT_FILENAME="pivotal-gemfire-native-${NATIVE_CLIENT_VERSION}-build.10-Linux-64bit.tar.gz"
 NATIVE_CLIENT_DIRECTORY="/opt/pivotal/gemfire/pivotal-gemfire-native"
 NATIVE_LINK_DIRECTORY="/opt/pivotal/gemfire/NativeClient"
 
-JAVA_RPM_FILENAME="jdk-8u171-linux-x64.rpm"
-JAVA_RPM_URL="http://download.oracle.com/otn-pub/java/jdk/8u171-b11/512cd62ec5174c3487ac17c61aaa89e8/$JAVA_RPM_FILENAME"
-
 set -e
 
-echo "Setting up Centos 6.5"
+echo "Setting up Linux"
 
-if ! yum -C repolist | grep epel ; then
-  rpm --import https://fedoraproject.org/static/0608B895.txt
-  rpm -Uvh http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
-fi
+INSTALL_CHK=`ruby -v | grep "ruby 2.4" | wc -l`
+if [ "$INSTALL_CHK" != "1" ]; then
+add-apt-repository -y ppa:openjdk-r/ppa
+apt-add-repository -y ppa:brightbox/ruby-ng
 
-yum -y install \
-  gcc-c++ \
+apt-get update
+
+apt-get -y install \
+  openjdk-8-jdk \
+  g++ \
   gdb \
   git \
-  gperftools \
-  gtest \
-  gtest-devel \
+  google-perftools \
+  libgoogle-perftools-dev \
+  libgtest-dev \
   htop \
-  libyaml \
+  libyaml-dev \
   man \
-  openssl-devel \
-  sqlite-devel \
+  libssl-dev \
+  sqlite3 \
+  libsqlite3-dev \
   unzip \
   valgrind \
   wget \
-  yum-utils \
-  yum-plugin-auto-update-debug-info.noarch
+  git-core \
+  curl \
+  zlib1g-dev \
+  build-essential \
+  libssl-dev \
+  libreadline-dev \
+  libxml2-dev \
+  libxslt1-dev \
+  libcurl4-openssl-dev \
+  python-software-properties \
+  libffi-dev \
+  rbenv \
+  ruby2.4 \
+  ruby2.4-dev
+fi
+
+NVM=`nvm list 8 | grep v8.11.3 | wc -l`
+if [ "$NVM" != "1" ]; then
+   \curl -sL https://deb.nodesource.com/setup_8.x | bash -
+   apt-get install -y nodejs
+fi 
+
+
 
 if [ ! -d $GEMFIRE_DIRECTORY ]; then
   if [ ! -e /vagrant/tmp/$GEMFIRE_SERVER_FILENAME ]; then
     echo "----------------------------------------------------"
     echo "Please download $GEMFIRE_SERVER_FILENAME"
     echo "from https://network.pivotal.io/products/pivotal-gemfire"
-    echo "(Pivotal GemFire v9.5.0)"
+    echo "(Pivotal GemFire v${GEMFIRE_VERSION})"
     echo "and place it in the ./tmp subdirectory of node-gemfire."
     echo "Then re-run \`vagrant provision\`."
     echo "----------------------------------------------------"
@@ -59,7 +84,7 @@ if [ ! -e $NATIVE_CLIENT_DIRECTORY ]; then
     echo "----------------------------------------------------"
     echo "Please download $NATIVE_CLIENT_FILENAME"
     echo "from https://network.pivotal.io/products/pivotal-gemfire"
-    echo "(Pivotal GemFire Native Client Linux 64bit v9.2.0.0)"
+    echo "(Pivotal GemFire Native Client Linux 64bit v${NATIVE_CLIENT_VERSION})"
     echo "and place it in the ./tmp subdirectory of node-gemfire."
     echo "Then re-run \`vagrant provision\`."
     echo "----------------------------------------------------"
@@ -68,13 +93,6 @@ if [ ! -e $NATIVE_CLIENT_DIRECTORY ]; then
   cd /opt/pivotal/gemfire
   tar zxvf /vagrant/tmp/$NATIVE_CLIENT_FILENAME
   chmod +x ${GEMFIRE_DIRECTORY}/bin/*
-fi
-
-if [ ! -e /usr/bin/javac ]; then
-  if [ ! -e /vagrant/tmp/$JAVA_RPM_FILENAME ]; then
-    wget --no-verbose -O /vagrant/tmp/$JAVA_RPM_FILENAME --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" $JAVA_RPM_URL
-  fi
-  rpm -ivh /vagrant/tmp/$JAVA_RPM_FILENAME
 fi
 
 sh -c "cat > /etc/profile.d/gfcpp.sh" <<EOF
@@ -88,7 +106,7 @@ export GFCPP=$NATIVE_LINK_DIRECTORY
 export GEMFIRE=$GEMFIRE_LINK_DIRECTORY
 EOF
 sh -c "cat >> /etc/profile.d/gfcpp.sh" <<'EOF'
-export JAVA_HOME=/usr/java/default
+export JAVA_HOME=$(readlink -f /usr/bin/javac | sed "s:/bin/javac::")
 export PATH=$GEMFIRE/bin:$GFCPP/bin:/usr/local/bin:$PATH
 export LD_LIBRARY_PATH=$GFCPP/lib:$LD_LIBRARY_PATH
 EOF

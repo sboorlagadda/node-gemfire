@@ -1,141 +1,12 @@
-# API Documentation
-
-## Cache
-
-The GemFire cache is an in-memory data store singleton object composed of many Regions. The cache instance is configured with an XML configuration file via `gemfire.configure()` and returned by calling `gemfire.getCache()`:
-
-### cache.createRegion(regionName, options)
-
-Adds a region to the GemFire cache. Once the region is created, it will remain in the client for the lifetime of the process. The `regionName` should be a string and the `options` object has a required type property.
-
- * `options.type`: the type of GemFire region to create. The value should be the string name of one of the GemFire region shortcuts, such as "LOCAL", "PROXY", or "CACHING_PROXY". See the GemFire documentation for [Region Shortcuts](http://gemfire.docs.pivotal.io/latest/userguide/gemfire_nativeclient/client-cache/region-shortcuts.html) and the [apache::geode::client::RegionShortcut C++ enumeration](http://gemfire.docs.pivotal.io/latest/cpp_api/cppdocs/namespacegemfire.html#596bc5edab9d1e7c232e53286b338183) for more details.
- * `options.poolName`: the name of the GemFire pool the region is in. If not specified, a default pool will be used.
-
-> **Warning:** If options.poolName is not specified, the default pool will be used. The default pool usually expects a GemFire server to be running on localhost on port 40404. If you are trying to connect to a GemFire cluster with a different configuration then you must specify options.poolName.
-
-Example:
-
-```javascript
-cache.getRegion("myRegion") // returns undefined
-
-var myRegion = cache.createRegion("myRegion", {type: "PROXY", poolName: "myPool"});
-
-cache.getRegion("myRegion") // returns the same region as myRegion
-```
-
-### cache.executeFunction(functionName, options)
-
-Executes a Java function on a server in the cluster containing the cache. `functionName` is the full Java class name of the function that will be called. Options may be either an array of arguments, or an options object.
-
- * `options.arguments`: the arguments to be passed to the Java function
- * `options.poolName`: the name of the GemFire pool where the function should be run
- * `options.synchronous`: if true, the function will not run asynchronously.
-
-> **Note**: Unlike region.executeFunction(), `options.filter` is not allowed.
-
-> **Warning:** Due to a workaround for a bug in Gemfire 8.0.0.0, when `options.poolName` is not specified, functions executed by cache.executeFunction() will be executed on exactly one server in the first pool defined in the XML configuration file.
-
-cache.executeFunction returns an EventEmitter which emits the following events:
-
- * `data`: Emitted once for each result sent by the Java function.
- * `error`: Emitted if the function throws or returns an Exception.
- * `end`: Called after the Java function has finally returned.
-
-> **Warning:** As of GemFire 8.0.0.0, there are some situations where the Java function can throw an uncaught Exception, but the node `error` callback never gets called. This is due to a known bug in how the GemFire 8.0.0.0 Native Client handles exceptions. This bug is only present for cache.executeFunction. region.executeFunction works as expected.
-
-Example:
-
-```javascript
-cache.executeFunction("com.example.FunctionName",
-    {
-      arguments: [1, 2, 3],
-      poolName: "myPool"
-    }
-  )
-  .on("error", function(error) { throw error; })
-  .on("data", function(result) {
-    // ...
-  })
-  .on("end", function() {
-    // ...
-  });
-```
-
-For more information, please see the [GemFire documentation for Function Execution](http://gemfire.docs.pivotal.io/latest/userguide/developing/function_exec/chapter_overview.html).
-
-### cache.executeFunction(functionName, arguments)
-
-Shorthand for `executeFunction` with an array of arguments. Equivalent to:
-
-```javascript
-cache.executeFunction(functionName, { arguments: arguments })
-```
-
-### cache.executeQuery(query, [parameters], [options], callback)
-
-Executes an OQL query on the cluster. The callback will be called with an `error` argument and a `response` argument.
-
- * `query`: a string representing a GemFire OQL query
- * `parameters`: an array of parameters for the query string
- * `options.poolName`: the name of the GemFire pool where the query should be executed
-
-The `response` argument is an object responding to `toArray` and `each`.
-
- * `response.toArray()`: Return the entire result set as an Array.
- * `response.each(callback)`: Call the callback with a `result` argument, once for each result.
-
-> **Warning:** Due to a workaround for a bug in Gemfire 8.0.0.0, when `options.poolName` is not specified, functions executed by cache.executeQuery() will be executed on exactly one server in the first pool defined in the XML configuration file.
-
-Example:
-
-```javascript
-cache.executeQuery("SELECT DISTINCT * FROM /exampleRegion WHERE foo = $1 OR foo = $2", ['bar', 'baz'], {poolName: "myPool"}, function(error, response) {
-  if(error) { throw error; }
-
-  var results = response.toArray();
-  // allResults could now be this:
-  //   [ { foo: 'bar' }, { foo: 'baz' } ]
-
-  // alternately, you could use the `each` iterator:
-  response.each(function(result) {
-  	// this callback will be called with { foo: 'bar' } then { foo: 'baz' }
-  });
-}
-```
-
-For more information on OQL, see [the documentation](http://gemfire.docs.pivotal.io/latest/userguide/developing/querying_basics/chapter_overview.html).
-
-### cache.getRegion(regionName)
-
-Retrieves a Region from the Cache. An error will be thrown if the region is not present.
-
-Example:
-
-```javascript
-var region = cache.getRegion('exampleRegion');
-```
-
-### cache.rootRegions()
-
-Retrieves an array of all root Regions from the Cache.
-
-Example:
-
-```javascript
-var regions = cache.rootRegions();
-// if there are three Regions defined in your cache, regions could now be:
-// [firstRegionName, secondRegionName, thirdRegionName]
-```
-
-## Region
+# Region
 
 A GemFire region is a collection of key-value pair entries. The most common way to get a region is to call `cache.getRegion('regionName')` on a Cache.
 
-### region.attributes
+## region.attributes
 
 Returns an object describing the attributes of the GemFire region. This can be useful for debugging your region configuration.
 
-Several of these values are described in the [GemFire documentation for region attributes](http://gemfire.docs.pivotal.io/latest/userguide/gemfire_nativeclient/client-cache/region-attributes.html).
+Several of these values are described in the [GemFire documentation for region attributes](http://gemfire-native.docs.pivotal.io/latest/geode/client-cache/region-attributes.html).
 
 Example output of `region.attributes`:
 
@@ -159,7 +30,7 @@ Example output of `region.attributes`:
 }
 ```
 
-### region.clear([callback])
+## region.clear([callback])
 
 Removes all entries from the region. The callback will be called with an `error` argument. If the callback is not supplied, and an error occurs, the region will emit an `error` event.
 
@@ -172,7 +43,7 @@ region.clear(function(error){
 });
 ```
 
-### region.destroyRegion([callback])
+## region.destroyRegion([callback])
 
 Destroys the region, deleting all entries. The callback will be called with an `error` argument. If the callback is not supplied, and an error occurs, the region will emit an `error` event.
 
@@ -190,7 +61,7 @@ region.destroyRegion(function(error){
 
 See also `region.localDestroyRegion`.
 
-### region.executeFunction(functionName, options)
+## region.executeFunction(functionName, options)
 
 Executes a Java function on any servers in the cluster containing the region. `functionName` is the full Java class name of the function that will be called. Options may be either an array of arguments, or an options object.
 
@@ -218,9 +89,9 @@ region.executeFunction("com.example.FunctionName",
   });
 ```
 
-For more information, please see the [GemFire documentation for Function Execution](http://gemfire.docs.pivotal.io/latest/userguide/developing/function_exec/chapter_overview.html).
+For more information, please see the [GemFire documentation for Function Execution](http://gemfire-native.docs.pivotal.io/latest/geode/function-execution/function-execution.html).
 
-### region.executeFunction(functionName, arguments)
+## region.executeFunction(functionName, arguments)
 
 Shorthand for `executeFunction` with an array of arguments. Equivalent to:
 
@@ -228,7 +99,7 @@ Shorthand for `executeFunction` with an array of arguments. Equivalent to:
 region.executeFunction(functionName, { arguments: arguments })
 ```
 
-### region.existsValue(predicate, callback)
+## region.existsValue(predicate, callback)
 
 Indicates whether or not a value matching the OQL predicate `predicate` is present in the region. The callback will be called with an `error` and the boolean `response`.
 
@@ -251,7 +122,7 @@ region.existsValue("foo > 2", function(error, response) {
 
 See also `region.query` and `region.selectValue`.
 
-### region.get(key, callback)
+## region.get(key, callback)
 
 Retrieves the value of an entry in the Region. The callback will be called with an `error` and the `value`. If the key is not present in the Region, an error will be passed to the callback.
 
@@ -264,7 +135,7 @@ region.get("key", function(error, value){
 });
 ```
 
-### region.getSync(key)
+## region.getSync(key)
 
 Retrieves the value of an entry in the Region synchronously.
 
@@ -275,7 +146,7 @@ Example:
 });
 ```
 
-### region.getAll(keys, callback)
+## region.getAll(keys, callback)
 
 Retrieves the values of multiple keys in the Region. The keys should be passed in as an `Array`. The callback will be called with an `error` and a `values` object. If one or more keys are not present in the region, their values will be returned as null.
 
@@ -290,7 +161,7 @@ region.getAll(["key1", "key2", "unknownKey"], function(error, values){
 });
 ```
 
-### region.keys(callback)
+## region.keys(callback)
 
 Retrieves all keys in the local cache of the Region. The callback will be called with an `error` argument, and an Array of keys.
 
@@ -304,7 +175,7 @@ region.keys(function(error, keys) {
 });
 ```
 
-### region.keys(callback)
+## region.keys(callback)
 
 Retrieves all keys on the Gemfire server for the Region. The callback will be called with an `error` argument, and an Array of keys.
 
@@ -318,7 +189,7 @@ region.serverKeys(function(error, keys) {
 });
 ```
 
-### values(callback)
+## values(callback)
 
 Retrieves all values on the local cache of the Region. The callback will be called with an `error` argument, and an Array of values.
 
@@ -332,7 +203,7 @@ region.values(function(error, keys) {
 });
 ```
 
-### entries(callback)
+## entries(callback)
 
 Retrieves all key-value pairs on the local cache of the Region. The callback will be called with an `error` argument, and an Array of values.
 
@@ -346,7 +217,7 @@ region.entries(function(error, keys) {
 });
 ```
 
-### region.localDestroyRegion([callback])
+## region.localDestroyRegion([callback])
 
 Destroys the local region, deleting all entries. The callback will be called with an `error` argument. If the callback is not supplied, and an error occurs, the region will emit an `error` event.
 
@@ -364,11 +235,11 @@ region.localDestroyRegion(function(error){
 
 See also `region.destroyRegion`.
 
-### region.name
+## region.name
 
 Returns the name of the region.
 
-### region.put(key, value, callback)
+## region.put(key, value, callback)
 
 Stores an entry in the region. The callback will be called with an `error` argument.
 
@@ -385,7 +256,7 @@ region.put('key', { foo: 'bar' }, function(error) {
 });
 ```
 
-### region.putSync(key, value)
+## region.putSync(key, value)
 
 Stores an entry in the region. Works the same way as `put` but does not take a callback or emit events.
 
@@ -397,7 +268,7 @@ region.putSync('key', { foo: 'bar' });
 });
 ```
 
-### region.putAll(entries, [callback])
+## region.putAll(entries, [callback])
 
 Stores multiple entries in the region. The callback will be called with an `error` argument. If the callback is not supplied, and an error occurs, the Region will emit an `error` event.
 
@@ -422,7 +293,7 @@ region.putAll(
 );
 ```
 
-### region.putAllSync(entries)
+## region.putAllSync(entries)
 
 Stores multiple entries in the region. Executes synchronously.
 
@@ -438,7 +309,7 @@ region.putAllSync(
 );
 ```
 
-### region.query(predicate, callback)
+## region.query(predicate, callback)
 
 Retrieves all values from the Region matching the OQL `predicate`. The callback will be called with an `error` argument, and a `response` object. For more information on `response` objects, please see `cache.executeQuery`.
 
@@ -459,7 +330,7 @@ region.query("this like '% Smith'", function(error, response) {
 
 See also `region.selectValue` and `region.existsValue`.
 
-### region.registerAllKeys()
+## region.registerAllKeys()
 
 Tells the GemFire server to trigger events for entry operations that were triggered by other clients in the system. By default, region entry operations (`region.put`, `region.remove`, etc.) that happen within a single Node process trigger events *only* within that same process. After calling `region.registerAllKeys`, all entry operations on the region will trigger events. In other words, the GemFire server will push notifications back to the Node process.
 
@@ -479,7 +350,7 @@ region.registerAllKeys();
 
 See also Events and `region.unregisterAllKeys`.
 
-### region.remove(key, [callback])
+## region.remove(key, [callback])
 
 Removes the entry specified by the indicated key from the Region, or, if no such entry is present, passes an `error` to the callback. If the argument is not supplied, and an error occurs, the Region will emit an `error` event.
 
@@ -492,7 +363,7 @@ region.remove('key1', function(error) {
 });
 ```
 
-### region.selectValue(predicate, callback)
+## region.selectValue(predicate, callback)
 
 Retrieves exactly one entry from the Region matching the OQL `predicate`. The callback will be called with an `error` argument, and a `result`.
 
@@ -510,7 +381,7 @@ region.selectValue("this = 'value1'", function(error, result) {
 
 See also `region.query` and `region.existsValue`.
 
-### region.unregisterAllKeys()
+## region.unregisterAllKeys()
 
 Tells the GemFire server *not* to trigger events for entry operations that were triggered by other clients in the system.
 
@@ -552,7 +423,7 @@ region.put("foo", null);
 region.put("foo", null, function(error) {});
 ```
 
-### Event: 'create'
+## Event: 'create'
 
 * event: GemFire event payload object.
   * event.key: The key that was inserted.
@@ -577,7 +448,7 @@ region.put("foo", "baz");
 
 See also `region.registerAllKeys`.
 
-### Event: 'destroy'
+## Event: 'destroy'
 
 * event: GemFire event payload object.
   * event.key: The key that was destroyed.
@@ -598,7 +469,7 @@ region.remove("foo");
 
 See also `region.registerAllKeys`.
 
-### Event: 'update'
+## Event: 'update'
 
 * event: GemFire event payload object.
   * event.key: The key that was updated.
