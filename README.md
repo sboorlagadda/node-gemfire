@@ -26,7 +26,7 @@ Available as a service on Pivotal Cloud Foundry, enable on-demand access to GemF
 
 [Learn more about GemFire](https://pivotal.io/pivotal-gemfire)
 
-## Patterns
+## GemFire Storage Patterns
 
 ![Common GemFire patterns](doc/CommonGemFireDataStoragePatterns.png)
 
@@ -46,9 +46,9 @@ This pattern can enable change data capture patterns in an asynchronous manner.
 
 **Refresh Ahead or Hot Cache** - In this pattern we either write an application that bulk loads the data into GemFire.   As an alternative we can utilize the GemFire servers load the data in a parallel scale out manner using GemFire functions.
 
-## Usage
+## Node GemFire Usage
 
-Writing a GemFire application we first need to connect to the GemFire database.  In the following example we use a GemFire Cache Factory to programmatically create the connection parameters to the GemFire servers.   Followed up with creating a `CACHING_PROXY` cache to a region.
+Writing a GemFire NodeJS application we first need to connect to the GemFire database.  In the following example we use a GemFire Cache Factory to programmatically create the connection parameters to the GemFire servers.   Followed up with creating a `CACHING_PROXY` connection to a region.
 
 
 ```javascript
