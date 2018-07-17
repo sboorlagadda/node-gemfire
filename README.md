@@ -4,7 +4,9 @@
 
 This project brings GemFire an in-memory database to NodeJS.   GemFire can support a wide variety patterns and use-cases that range from caching to system of record.
 
-**What is GemFire** - GemFire is a highly avaible database that utilizes RAM/Disk/CPU in a distributed manner to provide a near-linear scale out performance.  GemFire's main data access pattern key-value while also supporting a rich query language that allows object traversal of the values in the query.  
+#What is GemFire
+
+GemFire is a highly avaible database that utilizes RAM/Disk/CPU in a distributed manner to provide a near-linear scale out performance.  GemFire's main data access pattern key-value while also supporting a rich query language that allows object traversal of the values in the query.  
 
 ## GemFire Features
 **Predictable Low Latency** - Even during huge peaks in concurrent access, your users can count on predictable low latency because of the in-memory, horizontally scalable architecture of GemFire.
@@ -28,27 +30,26 @@ Available as a service on Pivotal Cloud Foundry, enable on-demand access to GemF
 
 ![Common GemFire patterns](doc/CommonGemFireDataStoragePatterns.png)
 
-** Caching ** - in-memory databases  like GemFire allow applications to take advantage of a computers RAM to offer extreme performance over traditional disk based systems.   Even if those disk based systems are built on flash storage, in-memory provides a extreme number of input/output operations per second (IOPS).
+**Caching** - in-memory databases  like GemFire allow applications to take advantage of a computers RAM to offer extreme performance over traditional disk based systems.   Even if those disk based systems are built on flash storage, in-memory provides a extreme number of input/output operations per second (IOPS).
 
-** System of Record ** - GemFire has a mature disk persistence capability that allows data to be written to disk.   This allows for applications that need durability in thier architecture.
+**System of Record** - GemFire has a mature disk persistence capability that allows data to be written to disk.   This allows for applications that need durability in thier architecture.
 
-** Cache Aside ** - In the cache aside pattern the application instance controls how data is written to the cache.   Typically the application checks to see if the key/value is in the system.   If there is a miss the application retrieves the value from an operational data store.   Then stores the key/value for the next time it is needed.
+**Cache Aside** - In the cache aside pattern the application instance controls how data is written to the cache.   Typically the application checks to see if the key/value is in the system.   If there is a miss the application retrieves the value from an operational data store.   Then stores the key/value for the next time it is needed.
 
-** Read/Write Through ** - by utilizing this pattern we can encapsulate the operational data store access within the GemFire servers.   This allows the application to focus on value added behavior.   Also allows GemFire to prevent operational concerns like the thundering herd problem.
+**Read/Write Through** - by utilizing this pattern we can encapsulate the operational data store access within the GemFire servers.   This allows the application to focus on value added behavior.   Also allows GemFire to prevent operational concerns like the thundering herd problem.
 
 This pattern can enable change data capture patterns in a synchronous manner.
 
-** Write Behind ** - In GemFire it has a powerful queuing mechanism that is highly avaible and durable that operates at in-memory performance and scale.   This allows GemFire to replicate data actions to an operational data store with a policy based on time or number of operations - which ever comes first.
+**Write Behind** - In GemFire it has a powerful queuing mechanism that is highly avaible and durable that operates at in-memory performance and scale.   This allows GemFire to replicate data actions to an operational data store with a policy based on time or number of operations - which ever comes first.
 
 This pattern can enable change data capture patterns in an asynchronous manner.
 
-** Refresh Ahead or Hot Cache ** - In this pattern we either write an application that bulk loads the data into GemFire.   As an alternative we can utilize the GemFire servers load the data in a parallel scale out manner using GemFire functions.
+**Refresh Ahead or Hot Cache** - In this pattern we either write an application that bulk loads the data into GemFire.   As an alternative we can utilize the GemFire servers load the data in a parallel scale out manner using GemFire functions.
 
 ## Usage
 
 Writing a GemFire application we first need to connect to the GemFire database.  In the following example we use a GemFire Cache Factory to programmatically create the connection parameters to the GemFire servers.   Followed up with creating a `CACHING_PROXY` cache to a region.
 
-[Read more about Regions here](doc/region.md)
 
 ```javascript
 var gemfire = require('gemfire');
@@ -68,7 +69,7 @@ region.put('foo', { bar: ['baz', 'qux'] }, function(error) {
 });
 ```
 
-For more information, please see the full [API documentation](doc/api.md).
+For more information, please see the [API documentation](doc/api.md).
 
 If you are using Cloud Foundry a sample can be [found here.](doc/cloud_foundary.md)
 
