@@ -1,8 +1,6 @@
-# API Documentation
+# API Documentation Summary
 
-The documentation is broken down into seperate pages for thier respective classes.   The idea is how some of the other language tools have thier documentation generated.
-
-This page serves as a jumping of point to those other pages and is an attempt a organizing those concepts into order in which those documentation pages are used.
+The documentation is broken down into seperate pages for thier respective classes.   
 
 * [GemFire](gemfire.md) - The JavaScript module.
 * [CacheFactory](cache_factory) - An API to allow developers to configure the connection details (pool, timeouts, singlehop,...).

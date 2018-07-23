@@ -1,8 +1,10 @@
 # API - CacheFactory
 
+The CacheFactory allows the connection details to be dynamically provided.   As a convienance the GemFire defaults can be passed into the `gemfire.createCacheFactory(pathToProperties)` then be overridden if needed.
+
 ## cacheFactory.addLocator(host, port)
 
-Adds a locator, given its host and port, to this factory.
+Adds a locator, given its host and port, to this factory.   A locator is the proces where servers register themselves when they come on-line.   This enables GemFire servers and clients to dynamically find each other at runtime.
 
 _Parameters_
 
@@ -15,7 +17,7 @@ A reference to this CacheFactory
 
 ## cacheFactory.addServer(host, port)
 
-Adds a server, given its host and port, to this factory.
+Directly connect to the server, given its host and port, to this factory.
 
 
 _Parameters_
@@ -27,11 +29,11 @@ _Returns_
 A reference to this CacheFactory
 
 ## cacheFactory.create()
-To create the instance of Cache.
+Once we are done setting any connection properites we use this method to instanciate the Cache.
 
 _Returns_
 
-A reference to the Cache
+A reference to the [Cache](cache.md)
 
 ## cacheFactory.set(name, value)
 Sets a geode property that will be used when creating the Cache.
@@ -45,6 +47,7 @@ _Returns_
 A reference to this CacheFactory
 
 ## cacheFactory.setFreeConnectionTimeout(connectionTimeout)
+
 Sets the free connection timeout for this pool.
 
 If the pool has a max connections setting, operations will block if all of the connections are in use. The free connection timeout specifies how long those operations will block waiting for a free connection before receiving an AllConnectionsInUseException. If max connections is not set this setting has no effect.
@@ -55,7 +58,6 @@ _Parameters_
 _Returns_
 
 A reference to this CacheFactory
-
 
 ## cacheFactory.setIdleTimeout(idleTimeout)
 
@@ -147,13 +149,9 @@ A reference to this CacheFactory
 By default setPRSingleHopEnabled is true
 The client is aware of location of partitions on servers hosting Regions.
 
-Using this information, the client routes the client cache operations directly to the server which is hosting the required partition for the cache operation. If setPRSingleHopEnabled is false the client can do an extra hop on servers to go to the required partition for that cache operation. The setPRSingleHopEnabled avoids extra hops only for following cache operations:
-1) Region#put(Object, Object)
-2) Region#get(Object)
-3) Region#destroy(Object)
-4) Region#getAll(Object, object)
+Using this information, the client routes the client cache operations directly to the server which is hosting the required partition for the cache operation. If setPRSingleHopEnabled is false the client can do an extra hop on servers to go to the required partition for that cache operation. 
 
-If enabled, works best when cacheFactory.setMaxConnections(int) is set to -1.
+If enabled it is advisable to also set `cacheFactory.setMaxConnections(int)` to -1.  This will help prevent unneeded closing of on the connnections in the connection pool as GemFire looks for a open connection to a given server.
 
 _Parameters_
 * **name** is boolean whether PR Single Hop optimization is enabled or not.
