@@ -1,7 +1,7 @@
 #!/bin/bash
 
 GEMFIRE_VERSION=9.5.1
-NATIVE_CLIENT_VERSION=9.2.0
+NATIVE_CLIENT_VERSION=9.2.1
 GEMFIRE_SERVER_FILENAME="pivotal-gemfire-${GEMFIRE_VERSION}.zip"
 GEMFIRE_DIRECTORY="/opt/pivotal/gemfire/pivotal-gemfire-${GEMFIRE_VERSION}"
 GEMFIRE_LINK_DIRECTORY="/opt/pivotal/gemfire/Pivotal_GemFire"
@@ -16,7 +16,7 @@ echo "Setting up Linux"
 
 INSTALL_CHK=`ruby -v | grep "ruby 2.4" | wc -l`
 if [ "$INSTALL_CHK" != "1" ]; then
-add-apt-repository -y ppa:openjdk-r/ppa
+apt-add-repository -y ppa:openjdk-r/ppa
 apt-add-repository -y ppa:brightbox/ruby-ng
 
 apt-get update

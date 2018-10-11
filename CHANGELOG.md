@@ -1,3 +1,6 @@
+# v1.0.1
+- The native binary wasn't being pulled from s3 so I needed to update the build
+
 # v1.0.0
 - Update to GemFire 9.2
 - Update to Node 8.11.3

@@ -18,6 +18,8 @@ if [ ! -d "lib/binding/Release/node-v57-linux-x64" ]; then
   echo "*************************************"
   echo "****** Installing Node GemFire ******"
   echo "*************************************"
+  npm install node-pre-gyp -g 
+  npm install aws-sdk -g
   npm install
 fi
 

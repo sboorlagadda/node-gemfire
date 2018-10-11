@@ -12,7 +12,7 @@ describe("gemfire", function() {
 
   describe(".gemfireVersion", function() {
     it("returns the version string from the GemFire native client", function() {
-      expect(gemfire.gemfireVersion).toEqual("9.2.0-build.10");
+      expect(gemfire.gemfireVersion).toEqual("9.2.1-build.10");
     });
   });
 
