@@ -1,6 +1,6 @@
 {
   "name": "gemfire",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Pivotal GemFire Client",
   "main": "./lib",
   "files": [
@@ -61,7 +61,7 @@
     "module_name": "gemfire",
     "module_path": "./lib/binding/{configuration}/{node_abi}-{platform}-{arch}/",
     "remote_path": "./node-{module_name}/{version}/",
-    "host": "https://download.pivotal.com.s3.amazonaws.com"
+    "host": "https://gemfire-field.s3.amazonaws.com/"
   },
   "dependencies": {
     "events": "^2.0.0",
@@ -77,7 +77,7 @@
   },
   "devDependencies": {
     "async": "^2.6.0",
-    "aws-sdk": "^2.245.1",
+    "aws-sdk": "^2.332.0",
     "grunt": "^1.0.2",
     "grunt-contrib-jshint": "^1.1.0",
     "grunt-newer": "^1.3.0",
