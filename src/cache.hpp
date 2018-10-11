@@ -4,19 +4,21 @@
 #include <v8.h>
 #include <nan.h>
 #include <node.h>
-#include <gfcpp/Cache.hpp>
+#include <geode/Cache.hpp>
 
 namespace node_gemfire {
 
-class Cache : public node::ObjectWrap {
+class Cache : public Nan::ObjectWrap {
  public:
+  // Called from binding.cpp to initialize the system
   static void Init(v8::Local<v8::Object> exports);
 
-  gemfire::CachePtr cachePtr;
-
+  apache::geode::client::CachePtr cachePtr;
+  static v8::Local<v8::Object> NewInstance(apache::geode::client::CachePtr);
+ 
  protected:
   explicit Cache(
-      gemfire::CachePtr cachePtr) :
+      apache::geode::client::CachePtr cachePtr) :
     cachePtr(cachePtr) {}
 
   virtual ~Cache() {
@@ -24,8 +26,7 @@ class Cache : public node::ObjectWrap {
   }
 
   void close();
-
-  static NAN_METHOD(New);
+  
   static NAN_METHOD(Close);
   static NAN_METHOD(ExecuteFunction);
   static NAN_METHOD(ExecuteQuery);
@@ -35,8 +36,13 @@ class Cache : public node::ObjectWrap {
   static NAN_METHOD(Inspect);
 
  private:
-  static gemfire::PoolPtr getPool(const v8::Handle<v8::Value> & poolNameValue);
-  v8::Local<v8::Function> exitCallback();
+  static apache::geode::client::PoolPtr getPool(const v8::Handle<v8::Value> & poolNameValue);
+  static v8::Local<v8::Function> exitCallback();
+  
+  static inline Nan::Persistent<v8::Function> & constructor() {
+    static Nan::Persistent<v8::Function> my_constructor;
+    return my_constructor;
+  }
 };
 
 }  // namespace node_gemfire

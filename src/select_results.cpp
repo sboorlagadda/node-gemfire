@@ -1,95 +1,89 @@
-#include <gfcpp/SelectResultsIterator.hpp>
+#include <geode/SelectResultsIterator.hpp>
 #include <sstream>
 #include "conversions.hpp"
 #include "select_results.hpp"
 
 using namespace v8;
-using namespace gemfire;
+using namespace apache::geode::client;
 
 namespace node_gemfire {
 
-Persistent<Function> SelectResults::constructor;
+NAN_MODULE_INIT(SelectResults::Init){
+  Nan::HandleScope scope;
 
-void SelectResults::Init(Local<Object> exports) {
-  NanScope();
+  Local<FunctionTemplate> constructorTemplate = Nan::New<FunctionTemplate>();
 
-  Local<FunctionTemplate> constructorTemplate(NanNew<FunctionTemplate>());
-
-  constructorTemplate->SetClassName(NanNew("SelectResults"));
+  constructorTemplate->SetClassName(Nan::New("SelectResults").ToLocalChecked());
   constructorTemplate->InstanceTemplate()->SetInternalFieldCount(1);
 
-  NanSetPrototypeTemplate(constructorTemplate, "toArray",
-      NanNew<FunctionTemplate>(SelectResults::ToArray)->GetFunction());
-  NanSetPrototypeTemplate(constructorTemplate, "each",
-      NanNew<FunctionTemplate>(SelectResults::Each)->GetFunction());
-  NanSetPrototypeTemplate(constructorTemplate, "inspect",
-      NanNew<FunctionTemplate>(SelectResults::Inspect)->GetFunction());
+  Nan::SetPrototypeMethod(constructorTemplate, "toArray", SelectResults::ToArray);
+  Nan::SetPrototypeMethod(constructorTemplate, "each", SelectResults::Each);
+  Nan::SetPrototypeMethod(constructorTemplate, "inspect", SelectResults::Inspect);
 
-  NanAssignPersistent(SelectResults::constructor, constructorTemplate->GetFunction());
+  constructor().Reset(Nan::GetFunction(constructorTemplate).ToLocalChecked());
+
+  Nan::Set(target, Nan::New("SelectResults").ToLocalChecked(), Nan::GetFunction(constructorTemplate).ToLocalChecked());
 }
 
 Local<Object> SelectResults::NewInstance(const SelectResultsPtr & selectResultsPtr) {
-  NanEscapableScope();
-
-  const unsigned int argc = 0;
+  Nan::EscapableHandleScope scope;
+ const unsigned int argc = 0;
   Local<Value> argv[argc] = {};
-  Local<Object> v8Object(NanNew(SelectResults::constructor)->NewInstance(argc, argv));
-
+  Local<Object> instance(Nan::New(SelectResults::constructor())->NewInstance(argc, argv));
   SelectResults * selectResults = new SelectResults(selectResultsPtr);
-  selectResults->Wrap(v8Object);
+  selectResults->Wrap(instance);
 
-  return NanEscapeScope(v8Object);
+  return scope.Escape(instance);
 }
 
 NAN_METHOD(SelectResults::ToArray) {
-  NanScope();
+  Nan::HandleScope scope;
 
-  SelectResults * selectResults = ObjectWrap::Unwrap<SelectResults>(args.This());
+  SelectResults * selectResults = Nan::ObjectWrap::Unwrap<SelectResults>(info.Holder());
   SelectResultsPtr selectResultsPtr(selectResults->selectResultsPtr);
 
   unsigned int length = selectResultsPtr->size();
 
-  Local<Array> array(NanNew<Array>(length));
+  Local<Array> array(Nan::New<Array>(length));
   for (unsigned int i = 0; i < length; i++) {
     array->Set(i, v8Value((*selectResultsPtr)[i]));
   }
-
-  NanReturnValue(array);
+  info.GetReturnValue().Set(array);
 }
 
 NAN_METHOD(SelectResults::Each) {
-  NanScope();
+  Nan::HandleScope scope;
 
-  if (args.Length() == 0 || !args[0]->IsFunction()) {
-    NanThrowError("You must pass a callback to each()");
-    NanReturnUndefined();
+  if (info.Length() == 0 || !info[0]->IsFunction()) {
+    Nan::ThrowError("You must pass a callback to each()");
+    info.GetReturnValue().Set(Nan::Undefined());
+    return;
   }
 
-  SelectResults * selectResults = ObjectWrap::Unwrap<SelectResults>(args.This());
+  SelectResults * selectResults = Nan::ObjectWrap::Unwrap<SelectResults>(info.Holder());
   SelectResultsPtr selectResultsPtr(selectResults->selectResultsPtr);
 
   SelectResultsIterator iterator(selectResultsPtr->getIterator());
-  Local<Function> callback(Local<Function>::Cast(args[0]));
+  Nan::Callback callback(Local<Function>::Cast(info[0]));
 
   while (iterator.hasNext()) {
     const unsigned int argc = 1;
     Local<Value> argv[argc] = { v8Value(iterator.next()) };
-    Local<Value> regionHandle(NanMakeCallback(args.This(), callback, argc, argv));
+    callback(1, argv);
   }
-
-  NanReturnValue(args.This());
+  info.GetReturnValue().Set(info.Holder());
 }
 
 NAN_METHOD(SelectResults::Inspect) {
-  NanScope();
+  Nan::HandleScope scope;
 
-  SelectResults * selectResults = ObjectWrap::Unwrap<SelectResults>(args.This());
+  SelectResults * selectResults =  Nan::ObjectWrap::Unwrap<SelectResults>(info.Holder());
   SelectResultsPtr selectResultsPtr(selectResults->selectResultsPtr);
 
   std::stringstream inspectStream;
   inspectStream << "[SelectResults size=" << selectResultsPtr->size() << "]";
 
-  NanReturnValue(NanNew(inspectStream.str().c_str()));
+  info.GetReturnValue().Set(Nan::New(inspectStream.str()).ToLocalChecked());
 }
 
 }  // namespace node_gemfire

@@ -1,5 +1,5 @@
 #include "functions.hpp"
-#include <gfcpp/FunctionService.hpp>
+#include <geode/FunctionService.hpp>
 #include <nan.h>
 #include <v8.h>
 #include <string>
@@ -11,7 +11,7 @@
 #include "streaming_result_collector.hpp"
 
 using namespace v8;
-using namespace gemfire;
+using namespace apache::geode::client;
 
 namespace node_gemfire {
 
@@ -33,12 +33,12 @@ class ExecuteFunctionWorker {
     functionFilter(functionFilter),
     ended(false),
     executeCompleted(false) {
-      NanAssignPersistent(emitter, emitterHandle);
+      emitter.Reset(emitterHandle);
       request.data = reinterpret_cast<void *>(this);
     }
 
   ~ExecuteFunctionWorker() {
-    NanDisposePersistent(emitter);
+    emitter.Reset();
     delete resultStream;
   }
 
@@ -77,15 +77,15 @@ class ExecuteFunctionWorker {
       executionPtr = executionPtr->withCollector(resultCollectorPtr);
 
       executionPtr->execute(functionName.c_str());
-    } catch (const gemfire::Exception & exception) {
+    } catch (const apache::geode::client::Exception & exception) {
       exceptionPtr = exception.clone();
     }
   }
 
   void ExecuteComplete() {
     if (exceptionPtr != NULLPTR) {
-      NanScope();
-      emitError(NanNew(emitter), v8Error(*exceptionPtr));
+      Nan::HandleScope scope;
+      emitError(Nan::New(emitter), v8Error(*exceptionPtr));
       ended = true;
     }
 
@@ -94,9 +94,9 @@ class ExecuteFunctionWorker {
   }
 
   void Data() {
-    NanScope();
+    Nan::HandleScope scope;
 
-    Local<Object> eventEmitter(NanNew(emitter));
+    Local<Object> eventEmitter(Nan::New(emitter));
 
     CacheableVectorPtr resultsPtr(resultStream->nextResults());
     for (CacheableVector::Iterator iterator(resultsPtr->begin());
@@ -115,9 +115,9 @@ class ExecuteFunctionWorker {
   }
 
   void End() {
-    NanScope();
+    Nan::HandleScope scope;
 
-    emitEvent(NanNew(emitter), "end");
+    emitEvent(Nan::New(emitter), "end");
 
     ended = true;
     teardownIfReady();
@@ -138,21 +138,21 @@ class ExecuteFunctionWorker {
   std::string functionName;
   CacheablePtr functionArguments;
   CacheableVectorPtr functionFilter;
-  Persistent<Object> emitter;
-  gemfire::ExceptionPtr exceptionPtr;
+  Nan::Persistent<Object> emitter;
+  apache::geode::client::ExceptionPtr exceptionPtr;
 
   bool ended;
   bool executeCompleted;
 };
 
-Local<Value> executeFunction(_NAN_METHOD_ARGS,
+Local<Value> executeFunction(Nan::NAN_METHOD_ARGS_TYPE info,
                              const CachePtr & cachePtr,
                              const ExecutionPtr & executionPtr) {
-  NanEscapableScope();
+   Nan::EscapableHandleScope scope;
 
-  if (args.Length() == 0 || !args[0]->IsString()) {
-    NanThrowError("You must provide the name of a function to execute.");
-    return NanEscapeScope(NanUndefined());
+  if (info.Length() == 0 || !info[0]->IsString()) {
+    Nan::ThrowError("You must provide the name of a function to execute.");
+    return scope.Escape(Nan::Undefined());
   }
 
   Local<Value> v8FunctionArguments;
@@ -160,31 +160,31 @@ Local<Value> executeFunction(_NAN_METHOD_ARGS,
   Local<Value> v8SynchronousFlag;
   bool synchronousFlag = false;
 
-  if (args[1]->IsArray()) {
-    v8FunctionArguments = args[1];
-  } else if (args[1]->IsObject()) {
-    Local<Object> optionsObject(args[1]->ToObject());
-    v8FunctionArguments = optionsObject->Get(NanNew("arguments"));
-    v8FunctionFilter = optionsObject->Get(NanNew("filter"));
+  if (info[1]->IsArray()) {
+    v8FunctionArguments = info[1];
+  } else if (info[1]->IsObject()) {
+    Local<Object> optionsObject(info[1]->ToObject());
+    v8FunctionArguments = optionsObject->Get(Nan::New("arguments").ToLocalChecked());
+    v8FunctionFilter = optionsObject->Get(Nan::New("filter").ToLocalChecked());
 
     if (!v8FunctionFilter->IsArray() && !v8FunctionFilter->IsUndefined()) {
-      NanThrowError("You must pass an Array of keys as the filter for executeFunction().");
-      return NanEscapeScope(NanUndefined());
+      Nan::ThrowError("You must pass an Array of keys as the filter for executeFunction().");
+      return scope.Escape(Nan::Undefined());
     }
 
-    v8SynchronousFlag = optionsObject->Get(NanNew("synchronous"));
+    v8SynchronousFlag = optionsObject->Get(Nan::New("synchronous").ToLocalChecked());
     if (!v8SynchronousFlag->IsBoolean() && !v8SynchronousFlag->IsUndefined()) {
-      NanThrowError("You must pass true or false for the synchronous option for executeFunction().");
-      return NanEscapeScope(NanUndefined());
+      Nan::ThrowError("You must pass true or false for the synchronous option for executeFunction().");
+      return scope.Escape(Nan::Undefined());
     } else if (!v8SynchronousFlag->IsUndefined()) {
       synchronousFlag = v8SynchronousFlag->ToBoolean()->Value();
     }
-  } else if (!args[1]->IsUndefined()) {
-    NanThrowError("You must pass either an Array of arguments or an options Object to executeFunction().");
-    return NanEscapeScope(NanUndefined());
+  } else if (!info[1]->IsUndefined()) {
+    Nan::ThrowError("You must pass either an Array of arguments or an options Object to executeFunction().");
+    return scope.Escape(Nan::Undefined());
   }
 
-  std::string functionName(*NanUtf8String(args[0]));
+  std::string functionName(*Nan::Utf8String(info[0]));
 
   CacheablePtr functionArguments;
   if (v8FunctionArguments.IsEmpty() || v8FunctionArguments->IsUndefined()) {
@@ -202,7 +202,7 @@ Local<Value> executeFunction(_NAN_METHOD_ARGS,
 
   if (synchronousFlag) {
     CacheableVectorPtr returnValue = CacheableVector::create();
-    gemfire::ExceptionPtr exceptionPtr;
+    apache::geode::client::ExceptionPtr exceptionPtr;
     ExecutionPtr synchronousExecutionPtr;
 
     try {
@@ -223,16 +223,16 @@ Local<Value> executeFunction(_NAN_METHOD_ARGS,
            ++iterator) {
         returnValue->push_back(*iterator);
       }
-    } catch (const gemfire::Exception & exception) {
+    } catch (const apache::geode::client::Exception & exception) {
       exceptionPtr = exception.clone();
     }
     if (returnValue->length() == 1) {
-      return NanEscapeScope(v8Array(returnValue)->Get(0));
+      return scope.Escape(v8Array(returnValue)->Get(0));
     } else {
-      return NanEscapeScope(v8Array(returnValue));
+      return scope.Escape(v8Array(returnValue));
     }
   } else {
-    Local<Function> eventEmitterConstructor(NanNew(dependencies)->Get(NanNew("EventEmitter")).As<Function>());
+    Local<Function> eventEmitterConstructor(Nan::New(dependencies)->Get(Nan::New("EventEmitter").ToLocalChecked()).As<Function>());
     Local<Object> eventEmitter(eventEmitterConstructor->NewInstance());
 
     ExecuteFunctionWorker * worker =
@@ -244,7 +244,7 @@ Local<Value> executeFunction(_NAN_METHOD_ARGS,
         ExecuteFunctionWorker::Execute,
         ExecuteFunctionWorker::ExecuteComplete);
 
-    return NanEscapeScope(eventEmitter);
+    return scope.Escape(eventEmitter);
   }
 }
 

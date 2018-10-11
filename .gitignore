@@ -7,7 +7,9 @@ lib-cov
 *.pid
 *.gz
 *.core.*
+*core.*
 callgrind.*
+package-lock.json
 
 pids
 logs
@@ -18,10 +20,20 @@ npm-debug.log
 node_modules
 build
 
+spec/support/java/function/bin
+
+.history/
+.vscode/
 .vagrant/*
-tmp/*
+
+tmp/**
 
 *.gfs
+
+.clang-format
+.idea/
+spec/support/java/function/.project
+spec/support/java/function/.classpath
 
 .gradle
 *.iml

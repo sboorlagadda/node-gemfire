@@ -1,7 +1,7 @@
 #ifndef __RESULT_STREAM_HPP__
 #define __RESULT_STREAM_HPP__
 
-#include <gfcpp/CacheableBuiltins.hpp>
+#include <geode/CacheableBuiltins.hpp>
 #include <uv.h>
 
 namespace node_gemfire {
@@ -13,7 +13,7 @@ class ResultStream {
                         uv_async_cb endCallback) :
     resultsAsync(new uv_async_t),
     endAsync(new uv_async_t),
-    resultsPtr(gemfire::CacheableVector::create()) {
+    resultsPtr(apache::geode::client::CacheableVector::create()) {
       uv_mutex_init(&resultsMutex);
       uv_mutex_init(&resultsProcessedMutex);
       uv_cond_init(&resultsProcessedCond);
@@ -31,11 +31,11 @@ class ResultStream {
     uv_cond_destroy(&resultsProcessedCond);
   }
 
-  void add(const gemfire::CacheablePtr & resultPtr);
+  void add(const apache::geode::client::CacheablePtr & resultPtr);
   void end();
   void resultsProcessed();
 
-  gemfire::CacheableVectorPtr nextResults();
+  apache::geode::client::CacheableVectorPtr nextResults();
 
  private:
   static void deleteHandle(uv_handle_t * handle);
@@ -48,7 +48,7 @@ class ResultStream {
 
   uv_cond_t resultsProcessedCond;
 
-  gemfire::CacheableVectorPtr resultsPtr;
+  apache::geode::client::CacheableVectorPtr resultsPtr;
 };
 
 }  // namespace node_gemfire

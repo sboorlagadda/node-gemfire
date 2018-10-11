@@ -1,8 +1,8 @@
 #ifndef __REGION_EVENT_REGISTRY_HPP__
 #define __REGION_EVENT_REGISTRY_HPP__
 
-#include <gfcpp/Region.hpp>
-#include <gfcpp/EntryEvent.hpp>
+#include <geode/Region.hpp>
+#include <geode/EntryEvent.hpp>
 #include <string>
 #include <set>
 #include "region_event_listener.hpp"
@@ -22,13 +22,13 @@ class RegionEventRegistry {
 
   void add(node_gemfire::Region * region);
   void remove(node_gemfire::Region * region);
-  void emit(const std::string & eventName, const gemfire::EntryEvent & event);
+  void emit(const std::string & eventName, const apache::geode::client::EntryEvent & event);
   static RegionEventRegistry * getInstance();
 
  private:
   void publishEvents();
 
-  gemfire::CacheListenerPtr listener;
+  apache::geode::client::CacheListenerPtr listener;
   static RegionEventRegistry instance;
   std::set<node_gemfire::Region *> regionSet;
   EventStream * eventStream;

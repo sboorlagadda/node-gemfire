@@ -1,6 +1,6 @@
 #include "streaming_result_collector.hpp"
 
-using namespace gemfire;
+using namespace apache::geode::client;
 
 namespace node_gemfire {
 

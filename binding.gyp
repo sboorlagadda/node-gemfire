@@ -1,5 +1,8 @@
 # vim: set ft=javascript
 {
+  'variables': {
+    'Build_Debug%': 'false'
+  },
   "target_defaults": {
     "include_dirs" : [
       "$(GFCPP)/include",
@@ -9,11 +12,14 @@
       '-fno-rtti', 
       '-fno-exceptions'
     ],
+    "cflags": [ 
+      '-std=c++11' 
+      ],
     "defines": [
       "_REENTRANT"
     ],
     "libraries": [ 
-      "-lgfcppcache", 
+      "-lpivotal-gemfire", 
       "-L$(GFCPP)/lib"
     ],
     "sources": [
@@ -32,6 +38,7 @@
       "src/region_event_registry.cpp",
       "src/event_stream.cpp",
       "src/region_shortcuts.cpp",
+      "src/cache_factory.cpp",
     ]
   },
   "targets": [
@@ -41,6 +48,12 @@
         "src/binding.cpp"
       ]
     },
+	# Remove because this will fail if nodejs source not installed
+    #{
+    #   "target_name": "test",
+    #   "libraries": [ "-lgtest" ],
+    #    "sources": [ "spec/cpp/test.cpp", ],
+    #},
     {
       "target_name": "action_after_build",
       "type": "none",
@@ -52,20 +65,5 @@
         }
       ]
     },
-  ],
-  "conditions": [
-    ["configuration=='Debug'", {
-      "targets": [
-        {
-          "target_name": "test",
-          "libraries": [
-            "-lgtest"
-          ],
-          "sources": [
-            "spec/cpp/test.cpp",
-          ]
-        }
-      ]
-    }]
   ]
 }

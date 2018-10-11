@@ -5,7 +5,7 @@
 #include "conversions.hpp"
 
 using namespace v8;
-using namespace gemfire;
+using namespace apache::geode::client;
 
 namespace node_gemfire {
 
@@ -40,22 +40,22 @@ std::vector<EventStream::Event *> EventStream::nextEvents() {
 }
 
 Local<Object> EventStream::Event::v8Object() {
-  NanEscapableScope();
+  Nan::EscapableHandleScope scope;
 
-  Local<Object> eventPayload(NanNew<Object>());
+  Local<Object> eventPayload = Nan::New<Object>();
 
-  eventPayload->Set(NanNew("key"), v8Value(entryEventPtr->getKey()));
-  eventPayload->Set(NanNew("oldValue"), v8Value(entryEventPtr->getOldValue()));
-  eventPayload->Set(NanNew("newValue"), v8Value(entryEventPtr->getNewValue()));
+  Nan::Set(eventPayload, Nan::New("key").ToLocalChecked(), v8Value(entryEventPtr->getKey()));
+  Nan::Set(eventPayload, Nan::New("oldValue").ToLocalChecked(), v8Value(entryEventPtr->getOldValue()));
+  Nan::Set(eventPayload, Nan::New("newValue").ToLocalChecked(), v8Value(entryEventPtr->getNewValue()));
 
-  return NanEscapeScope(eventPayload);
+  return scope.Escape(eventPayload);
 }
 
 std::string EventStream::Event::getName() {
   return eventName;
 }
 
-gemfire::RegionPtr EventStream::Event::getRegion() {
+apache::geode::client::RegionPtr EventStream::Event::getRegion() {
   return entryEventPtr->getRegion();
 }
 

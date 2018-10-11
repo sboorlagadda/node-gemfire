@@ -1,10 +1,12 @@
-<?xml version="1.0"?>
-<!DOCTYPE client-cache PUBLIC
-    "-//GemStone Systems, Inc.//GemFire Declarative Caching 7.0//EN"
-    "http://www.gemstone.com/dtd/cache7_0.dtd">
+<?xml version="1.0" encoding="UTF-8"?>
+<client-cache
+    xmlns="http://geode.apache.org/schema/cache"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://geode.apache.org/schema/cache http://geode.apache.org/schema/cache/cache-1.0.xsd"
+    version="1.0">
 
-<client-cache>
   <pool name="client">
     <server host="localhost" port="40404" />
   </pool>
+  <pdx read-serialized="false" />
 </client-cache>

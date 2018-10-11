@@ -8,7 +8,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # All Vagrant configuration is done here. The most common configuration
   # options are documented and commented below. For a complete reference,
   # please see the online documentation at vagrantup.com.
-  config.vm.box = "bento/centos-6.7"
+  config.vm.box = "ubuntu/trusty64"
   config.vm.hostname = "node-gemfire-dev"
   config.vm.define "node-gemfire-dev"
 
@@ -29,8 +29,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   config.ssh.forward_agent = true
 
-  config.vm.provision "shell", path: "bin/vagrant_setup_centos6.5.sh"
-  config.vm.provision "shell", privileged: false, path: "bin/vagrant_ruby.sh"
+  config.vm.provision "shell", path: "bin/vagrant_setup_linux.sh"
   config.vm.provision "shell", privileged: false, path: "bin/vagrant_node.sh"
   config.vm.provision "shell", privileged: false, path: "bin/vagrant_gdb.sh"
   config.vm.provision "shell", privileged: false, path: "bin/vagrant_build_project.sh"

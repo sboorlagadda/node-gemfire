@@ -3,26 +3,29 @@
 
 #include <v8.h>
 #include <nan.h>
-#include <gfcpp/SelectResults.hpp>
+#include <geode/SelectResults.hpp>
 #include <node.h>
 
 namespace node_gemfire {
 
-class SelectResults : public node::ObjectWrap {
+class SelectResults : public Nan::ObjectWrap {
  public:
-  explicit SelectResults(gemfire::SelectResultsPtr selectResultsPtr) :
+  explicit SelectResults(apache::geode::client::SelectResultsPtr selectResultsPtr) :
     selectResultsPtr(selectResultsPtr) {}
 
-  static void Init(v8::Local<v8::Object> exports);
-  static v8::Local<v8::Object> NewInstance(
-      const gemfire::SelectResultsPtr & selectResultsPtr);
+  static NAN_MODULE_INIT(Init);
+  
   static NAN_METHOD(ToArray);
   static NAN_METHOD(Each);
   static NAN_METHOD(Inspect);
 
+  static v8::Local<v8::Object> NewInstance(const apache::geode::client::SelectResultsPtr & selectResultsPtr);
  private:
-  gemfire::SelectResultsPtr selectResultsPtr;
-  static v8::Persistent<v8::Function> constructor;
+  apache::geode::client::SelectResultsPtr selectResultsPtr;
+   static inline Nan::Persistent<v8::Function> & constructor() {
+      static Nan::Persistent<v8::Function> my_constructor;
+      return my_constructor;
+    }
 };
 
 
