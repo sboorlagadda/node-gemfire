@@ -15,6 +15,7 @@ pids
 logs
 results
 lib/binding
+lib/node-v*
 *.tgz
 npm-debug.log
 node_modules

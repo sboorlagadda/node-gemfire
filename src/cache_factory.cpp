@@ -192,7 +192,7 @@ NAN_METHOD(CacheFactory::SetPingInterval) {
     return;
   }
   CacheFactory * cacheFactory = Nan::ObjectWrap::Unwrap<CacheFactory>(info.This());
-  cacheFactory->cacheFactoryPtr->setPingInterval(Nan::To<long>(info[1]).FromJust());
+  cacheFactory->cacheFactoryPtr->setPingInterval(Nan::To<int64_t>(info[1]).FromJust());
   info.GetReturnValue().Set(info.This());
 }
 NAN_METHOD(CacheFactory::SetPRSingleHopEnabled) {
@@ -324,7 +324,7 @@ NAN_METHOD(CacheFactory::SetUpdateLocatorListInterval) {
     return;
   }
   CacheFactory * cacheFactory = Nan::ObjectWrap::Unwrap<CacheFactory>(info.This());
-  cacheFactory->cacheFactoryPtr->setUpdateLocatorListInterval(Nan::To<long>(info[1]).FromJust());
+  cacheFactory->cacheFactoryPtr->setUpdateLocatorListInterval(Nan::To<int64_t>(info[1]).FromJust());
   info.GetReturnValue().Set(info.This());
 }
 NAN_METHOD(CacheFactory::Create) {
