@@ -11,9 +11,8 @@ namespace node_gemfire {
 
 class SelectResults : public Nan::ObjectWrap {
  public:
-  explicit SelectResults(
-      apache::geode::client::SelectResultsPtr selectResultsPtr)
-      : selectResultsPtr(selectResultsPtr) {}
+  explicit SelectResults(std::shared_ptr<apache::geode::client::SelectResults> selectResultsPtr) :
+    selectResultsPtr(selectResultsPtr) {}
 
   static NAN_MODULE_INIT(Init);
 

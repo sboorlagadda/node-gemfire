@@ -13,12 +13,13 @@ namespace node_gemfire {
 
 class Region : public Nan::ObjectWrap {
  public:
-  Region(apache::geode::client::RegionPtr regionPtr) : regionPtr(regionPtr) {}
+  Region(std::shared_ptr<apache::geode::client::Region> region) :
+    region(region) {}
 
   virtual ~Region() { RegionEventRegistry::getInstance()->remove(this); }
 
   static NAN_MODULE_INIT(Init);
-  static v8::Local<v8::Object> NewInstance(apache::geode::client::RegionPtr);
+  static v8::Local<v8::Object> NewInstance(std::shared_ptr<apache::geode::client::Region>);
 
   static NAN_METHOD(Clear);
   static NAN_METHOD(Put);
@@ -46,7 +47,7 @@ class Region : public Nan::ObjectWrap {
   template <typename T>
   static NAN_METHOD(Query);
 
-  apache::geode::client::RegionPtr regionPtr;
+  std::shared_ptr<apache::geode::client::Region> region;
 
  private:
   static inline Nan::Persistent<v8::Function>& constructor() {

@@ -4,8 +4,9 @@
 #include <nan.h>
 #include <node.h>
 #include <v8.h>
-
-#include <cstdint>
+#include <math.h>
+#include <string>
+#include <sstream>
 #include <set>
 #include <sstream>
 #include <string>

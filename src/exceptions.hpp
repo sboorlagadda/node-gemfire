@@ -1,6 +1,9 @@
 #ifndef __EXCEPTIONS_HPP__
 #define __EXCEPTIONS_HPP__
 
+#include <geode/ExceptionTypes.hpp>
+#include <geode/UserFunctionExecutionException.hpp>
+
 #include <v8.h>
 
 #include <geode/GeodeCppCache.hpp>

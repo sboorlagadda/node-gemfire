@@ -6,6 +6,7 @@
 #include <v8.h>
 
 #include <geode/Cache.hpp>
+#include <memory>
 
 namespace node_gemfire {
 
@@ -14,12 +15,13 @@ class Cache : public Nan::ObjectWrap {
   // Called from binding.cpp to initialize the system
   static void Init(v8::Local<v8::Object> exports);
 
-  apache::geode::client::CachePtr cachePtr;
-  static v8::Local<v8::Object> NewInstance(apache::geode::client::CachePtr);
-
+  std::unique_ptr<apache::geode::client::Cache> cache;
+  static v8::Local<v8::Object> NewInstance(std::unique_ptr<apache::geode::client::Cache>);
+ 
  protected:
-  explicit Cache(apache::geode::client::CachePtr cachePtr)
-      : cachePtr(cachePtr) {}
+  explicit Cache(
+      std::unique_ptr<apache::geode::client::Cache> cache) :
+    cache(std::move(cache)) {}
 
   virtual ~Cache() { close(); }
 
@@ -34,8 +36,7 @@ class Cache : public Nan::ObjectWrap {
   static NAN_METHOD(Inspect);
 
  private:
-  static apache::geode::client::PoolPtr getPool(
-      const v8::Handle<v8::Value>& poolNameValue);
+  static std::shared_ptr<apache::geode::client::Pool> getPool(const v8::Handle<v8::Value> & poolNameValue);
   static v8::Local<v8::Function> exitCallback();
 
   static inline Nan::Persistent<v8::Function>& constructor() {

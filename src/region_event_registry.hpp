@@ -31,7 +31,7 @@ class RegionEventRegistry {
  private:
   void publishEvents();
 
-  apache::geode::client::CacheListenerPtr listener;
+  std::shared_ptr<apache::geode::client::CacheListener> listener;
   static RegionEventRegistry instance;
   std::set<node_gemfire::Region *> regionSet;
   EventStream *eventStream;
