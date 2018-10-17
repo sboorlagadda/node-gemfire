@@ -31,7 +31,6 @@ tmp/**
 
 *.gfs
 
-.clang-format
 .idea/
 spec/support/java/function/.project
 spec/support/java/function/.classpath

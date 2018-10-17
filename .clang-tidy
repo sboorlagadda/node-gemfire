@@ -1,0 +1,6 @@
+---
+Checks:          '-*,clang-diagnostic-*,clang-analyzer-*,-clang-analyzer-alpha*,google-*'
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*'
+FormatStyle:     file
+...
