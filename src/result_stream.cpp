@@ -4,7 +4,7 @@ using namespace apache::geode::client;
 
 namespace node_gemfire {
 
-void ResultStream::add(const CacheablePtr & resultPtr) {
+void ResultStream::add(const CacheablePtr& resultPtr) {
   uv_mutex_lock(&resultsMutex);
   resultsPtr->push_back(resultPtr);
   uv_mutex_unlock(&resultsMutex);
@@ -33,8 +33,7 @@ CacheableVectorPtr ResultStream::nextResults() {
   CacheableVectorPtr returnValue = CacheableVector::create();
 
   for (CacheableVector::Iterator iterator(resultsPtr->begin());
-       iterator != resultsPtr->end();
-       ++iterator) {
+       iterator != resultsPtr->end(); ++iterator) {
     returnValue->push_back(*iterator);
   }
 
@@ -45,8 +44,6 @@ CacheableVectorPtr ResultStream::nextResults() {
   return returnValue;
 }
 
-void ResultStream::deleteHandle(uv_handle_t * handle) {
-  delete handle;
-}
+void ResultStream::deleteHandle(uv_handle_t* handle) { delete handle; }
 
 }  // namespace node_gemfire

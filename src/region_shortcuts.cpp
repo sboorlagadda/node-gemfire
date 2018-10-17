@@ -1,11 +1,12 @@
 #include "region_shortcuts.hpp"
+
 #include <string>
 
 using namespace apache::geode::client;
 
 namespace node_gemfire {
 
-RegionShortcut getRegionShortcut(const std::string & regionShortcutName) {
+RegionShortcut getRegionShortcut(const std::string& regionShortcutName) {
   if (regionShortcutName == "PROXY") {
     return PROXY;
   } else if (regionShortcutName == "CACHING_PROXY") {
@@ -21,6 +22,6 @@ RegionShortcut getRegionShortcut(const std::string & regionShortcutName) {
   return invalidRegionShortcut;
 }
 
-RegionShortcut invalidRegionShortcut = (RegionShortcut) -1;
+RegionShortcut invalidRegionShortcut = (RegionShortcut)-1;
 
 }  // namespace node_gemfire

@@ -1,23 +1,21 @@
 #ifndef __REGION_HPP__
 #define __REGION_HPP__
 
-#include <v8.h>
 #include <nan.h>
 #include <node.h>
+#include <v8.h>
+
 #include <geode/Region.hpp>
+
 #include "region_event_registry.hpp"
 
 namespace node_gemfire {
 
 class Region : public Nan::ObjectWrap {
-
  public:
-  Region(apache::geode::client::RegionPtr regionPtr) :
-    regionPtr(regionPtr) {}
+  Region(apache::geode::client::RegionPtr regionPtr) : regionPtr(regionPtr) {}
 
-  virtual ~Region() {
-    RegionEventRegistry::getInstance()->remove(this);
-  }
+  virtual ~Region() { RegionEventRegistry::getInstance()->remove(this); }
 
   static NAN_MODULE_INIT(Init);
   static v8::Local<v8::Object> NewInstance(apache::geode::client::RegionPtr);
@@ -45,17 +43,16 @@ class Region : public Nan::ObjectWrap {
   static NAN_GETTER(Name);
   static NAN_GETTER(Attributes);
 
-  template<typename T>
+  template <typename T>
   static NAN_METHOD(Query);
 
   apache::geode::client::RegionPtr regionPtr;
 
-  private:
-    static inline Nan::Persistent<v8::Function> & constructor() {
-      static Nan::Persistent<v8::Function> my_constructor;
-      return my_constructor;
-    }
-
+ private:
+  static inline Nan::Persistent<v8::Function>& constructor() {
+    static Nan::Persistent<v8::Function> my_constructor;
+    return my_constructor;
+  }
 };
 
 }  // namespace node_gemfire

@@ -1,14 +1,17 @@
-#include <geode/SelectResultsIterator.hpp>
-#include <sstream>
-#include "conversions.hpp"
 #include "select_results.hpp"
+
+#include <sstream>
+
+#include <geode/SelectResultsIterator.hpp>
+
+#include "conversions.hpp"
 
 using namespace v8;
 using namespace apache::geode::client;
 
 namespace node_gemfire {
 
-NAN_MODULE_INIT(SelectResults::Init){
+NAN_MODULE_INIT(SelectResults::Init) {
   Nan::HandleScope scope;
 
   Local<FunctionTemplate> constructorTemplate = Nan::New<FunctionTemplate>();
@@ -16,21 +19,26 @@ NAN_MODULE_INIT(SelectResults::Init){
   constructorTemplate->SetClassName(Nan::New("SelectResults").ToLocalChecked());
   constructorTemplate->InstanceTemplate()->SetInternalFieldCount(1);
 
-  Nan::SetPrototypeMethod(constructorTemplate, "toArray", SelectResults::ToArray);
+  Nan::SetPrototypeMethod(constructorTemplate, "toArray",
+                          SelectResults::ToArray);
   Nan::SetPrototypeMethod(constructorTemplate, "each", SelectResults::Each);
-  Nan::SetPrototypeMethod(constructorTemplate, "inspect", SelectResults::Inspect);
+  Nan::SetPrototypeMethod(constructorTemplate, "inspect",
+                          SelectResults::Inspect);
 
   constructor().Reset(Nan::GetFunction(constructorTemplate).ToLocalChecked());
 
-  Nan::Set(target, Nan::New("SelectResults").ToLocalChecked(), Nan::GetFunction(constructorTemplate).ToLocalChecked());
+  Nan::Set(target, Nan::New("SelectResults").ToLocalChecked(),
+           Nan::GetFunction(constructorTemplate).ToLocalChecked());
 }
 
-Local<Object> SelectResults::NewInstance(const SelectResultsPtr & selectResultsPtr) {
+Local<Object> SelectResults::NewInstance(
+    const SelectResultsPtr& selectResultsPtr) {
   Nan::EscapableHandleScope scope;
- const unsigned int argc = 0;
+  const unsigned int argc = 0;
   Local<Value> argv[argc] = {};
-  Local<Object> instance(Nan::New(SelectResults::constructor())->NewInstance(argc, argv));
-  SelectResults * selectResults = new SelectResults(selectResultsPtr);
+  Local<Object> instance(
+      Nan::New(SelectResults::constructor())->NewInstance(argc, argv));
+  SelectResults* selectResults = new SelectResults(selectResultsPtr);
   selectResults->Wrap(instance);
 
   return scope.Escape(instance);
@@ -39,7 +47,8 @@ Local<Object> SelectResults::NewInstance(const SelectResultsPtr & selectResultsP
 NAN_METHOD(SelectResults::ToArray) {
   Nan::HandleScope scope;
 
-  SelectResults * selectResults = Nan::ObjectWrap::Unwrap<SelectResults>(info.Holder());
+  SelectResults* selectResults =
+      Nan::ObjectWrap::Unwrap<SelectResults>(info.Holder());
   SelectResultsPtr selectResultsPtr(selectResults->selectResultsPtr);
 
   unsigned int length = selectResultsPtr->size();
@@ -60,7 +69,8 @@ NAN_METHOD(SelectResults::Each) {
     return;
   }
 
-  SelectResults * selectResults = Nan::ObjectWrap::Unwrap<SelectResults>(info.Holder());
+  SelectResults* selectResults =
+      Nan::ObjectWrap::Unwrap<SelectResults>(info.Holder());
   SelectResultsPtr selectResultsPtr(selectResults->selectResultsPtr);
 
   SelectResultsIterator iterator(selectResultsPtr->getIterator());
@@ -68,7 +78,7 @@ NAN_METHOD(SelectResults::Each) {
 
   while (iterator.hasNext()) {
     const unsigned int argc = 1;
-    Local<Value> argv[argc] = { v8Value(iterator.next()) };
+    Local<Value> argv[argc] = {v8Value(iterator.next())};
     callback(1, argv);
   }
   info.GetReturnValue().Set(info.Holder());
@@ -77,7 +87,8 @@ NAN_METHOD(SelectResults::Each) {
 NAN_METHOD(SelectResults::Inspect) {
   Nan::HandleScope scope;
 
-  SelectResults * selectResults =  Nan::ObjectWrap::Unwrap<SelectResults>(info.Holder());
+  SelectResults* selectResults =
+      Nan::ObjectWrap::Unwrap<SelectResults>(info.Holder());
   SelectResultsPtr selectResultsPtr(selectResults->selectResultsPtr);
 
   std::stringstream inspectStream;

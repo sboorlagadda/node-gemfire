@@ -1,9 +1,10 @@
 #ifndef __CACHE_FACTORY_HPP__
 #define __CACHE_FACTORY_HPP__
 
-#include <v8.h>
 #include <nan.h>
 #include <node.h>
+#include <v8.h>
+
 #include <geode/CacheFactory.hpp>
 
 namespace node_gemfire {
@@ -16,12 +17,10 @@ class CacheFactory : public Nan::ObjectWrap {
   apache::geode::client::CacheFactoryPtr cacheFactoryPtr;
 
  protected:
-  explicit CacheFactory(apache::geode::client::CacheFactoryPtr cacheFactoryPtr) :
-    cacheFactoryPtr(cacheFactoryPtr),
-    callback(NULL) {}
+  explicit CacheFactory(apache::geode::client::CacheFactoryPtr cacheFactoryPtr)
+      : cacheFactoryPtr(cacheFactoryPtr), callback(NULL) {}
 
-  virtual ~CacheFactory() {
-  }
+  virtual ~CacheFactory() {}
   static NAN_METHOD(New);
   static NAN_METHOD(AddLocator);
   static NAN_METHOD(AddServer);
@@ -47,11 +46,10 @@ class CacheFactory : public Nan::ObjectWrap {
   static NAN_METHOD(SetThreadLocalConnections);
   static NAN_METHOD(SetUpdateLocatorListInterval);
 
-  
-  Nan::Callback * callback;
+  Nan::Callback* callback;
+
  private:
-  
-  static inline Nan::Persistent<v8::Function> & constructor() {
+  static inline Nan::Persistent<v8::Function>& constructor() {
     static Nan::Persistent<v8::Function> my_constructor;
     return my_constructor;
   }

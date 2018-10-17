@@ -3,13 +3,15 @@
 
 #include <nan.h>
 #include <v8.h>
+
 #include <geode/Cache.hpp>
 
 namespace node_gemfire {
 
-v8::Local<v8::Value> executeFunction(Nan::NAN_METHOD_ARGS_TYPE info,
-                                     const apache::geode::client::CachePtr & cachePtr,
-                                     const apache::geode::client::ExecutionPtr & executionPtr);
+v8::Local<v8::Value> executeFunction(
+    Nan::NAN_METHOD_ARGS_TYPE info,
+    const apache::geode::client::CachePtr& cachePtr,
+    const apache::geode::client::ExecutionPtr& executionPtr);
 
 }  // namespace node_gemfire
 
