@@ -4,14 +4,14 @@
 #include <nan.h>
 #include <node.h>
 #include <v8.h>
-#include <math.h>
-#include <string>
-#include <sstream>
+
+#include <cstdint>
 #include <set>
 #include <sstream>
 #include <string>
 
-#include <geode/GeodeCppCache.hpp>
+#include <geode/CacheableUndefined.hpp>
+#include <geode/internal/DataSerializablePrimitive.hpp>
 
 #include "exceptions.hpp"
 #include "select_results.hpp"
@@ -19,7 +19,6 @@
 using namespace std;
 using namespace chrono;
 using namespace v8;
-using namespace apache::geode::client;
 
 namespace node_gemfire {
 
@@ -122,23 +121,25 @@ void ConsoleWarn(const char* message) {
   callback.Call(1, argv);
 }
 
-CacheablePtr gemfireValue(const Local<Value>& v8Value,
-                          const CachePtr& cachePtr) {
+std::shared_ptr<apache::geode::client::Cacheable> gemfireValue(
+    const Local<Value>& v8Value, apache::geode::client::Cache& cachePtr) {
   if (v8Value->IsString() || v8Value->IsStringObject()) {
-    std::wstring wideString = wstringFromV8String(v8Value->ToString());
-    const wchar_t* readOnlyWideChar = wideString.c_str();
-    return CacheableString::create(readOnlyWideChar);
+    return apache::geode::client::CacheableString::create(
+        *Nan::Utf8String(v8Value->ToString()));
   } else if (v8Value->IsBoolean()) {
-    return CacheableBoolean::create(v8Value->ToBoolean()->Value());
+    return apache::geode::client::CacheableBoolean::create(
+        v8Value->ToBoolean()->Value());
   } else if (v8Value->IsNumber() || v8Value->IsNumberObject()) {
-    return CacheableDouble::create(v8Value->ToNumber()->Value());
+    return apache::geode::client::CacheableDouble::create(
+        v8Value->ToNumber()->Value());
   } else if (v8Value->IsDate()) {
     return gemfireValue(Local<Date>::Cast(v8Value));
   } else if (v8Value->IsArray()) {
     return gemfireValue(Local<Array>::Cast(v8Value), cachePtr);
   } else if (v8Value->IsBooleanObject()) {
 #if (NODE_MODULE_VERSION > 0x000B)
-    return CacheableBoolean::create(BooleanObject::Cast(*v8Value)->ValueOf());
+    return apache::geode::client::CacheableBoolean::create(
+        BooleanObject::Cast(*v8Value)->ValueOf());
 #else
     return CacheableBoolean::create(
         BooleanObject::Cast(*v8Value)->BooleanValue());
@@ -146,235 +147,246 @@ CacheablePtr gemfireValue(const Local<Value>& v8Value,
   } else if (v8Value->IsFunction()) {
     Nan::ThrowError(
         "Unable to serialize to GemFire; functions are not supported.");
-    return NULLPTR;
+    return nullptr;
   } else if (v8Value->IsObject()) {
     return gemfireValue(v8Value->ToObject(), cachePtr);
   } else if (v8Value->IsUndefined()) {
-    return CacheableUndefined::create();
+    return apache::geode::client::CacheableUndefined::create();
   } else if (v8Value->IsNull()) {
-    return NULLPTR;
+    return nullptr;
   } else {
     std::string errorMessage(
         "Unable to serialize to GemFire; unknown JavaScript object: ");
     errorMessage.append(*Nan::Utf8String(v8Value->ToDetailString()));
     Nan::ThrowError(errorMessage.c_str());
-    return NULLPTR;
+    return nullptr;
   }
 }
 
-PdxInstancePtr gemfireValue(const Local<Object>& v8Object,
-                            const CachePtr& cachePtr) {
+std::shared_ptr<apache::geode::client::PdxInstance> gemfireValue(
+    const Local<Object>& v8Object, apache::geode::client::Cache& cachePtr) {
   Nan::EscapableHandleScope scope;
   try {
     std::string pdxClassName = getClassName(v8Object);
-    PdxInstanceFactoryPtr pdxInstanceFactory =
-        cachePtr->createPdxInstanceFactory(pdxClassName.c_str());
+    auto pdxInstanceFactory = cachePtr.createPdxInstanceFactory(pdxClassName);
     Local<Array> v8Keys(v8Object->GetOwnPropertyNames());
     unsigned int length = v8Keys->Length();
     for (unsigned int i = 0; i < length; i++) {
       Local<Value> v8Key(v8Keys->Get(i));
       Local<Value> v8Value(v8Object->Get(v8Key));
       Nan::Utf8String fieldName(v8Key);
-      CacheablePtr cacheablePtr(gemfireValue(v8Value, cachePtr));
-      pdxInstanceFactory->writeObject(*fieldName, cacheablePtr);
+      auto cacheablePtr = gemfireValue(v8Value, cachePtr);
+      pdxInstanceFactory.writeObject(*fieldName, cacheablePtr);
     }
-    return pdxInstanceFactory->create();
+    return pdxInstanceFactory.create();
   } catch (const apache::geode::client::Exception& exception) {
     ThrowGemfireException(exception);
-    return NULLPTR;
+    return nullptr;
   }
 }
 
-apache::geode::client::CacheableArrayListPtr gemfireValue(
-    const Local<Array>& v8Array,
-    const apache::geode::client::CachePtr& cachePtr) {
-  CacheableArrayListPtr arrayListPtr(CacheableArrayList::create());
-  unsigned int length = v8Array->Length();
-  for (unsigned int i = 0; i < length; i++) {
+std::shared_ptr<apache::geode::client::CacheableArrayList> gemfireValue(
+    const Local<Array>& v8Array, apache::geode::client::Cache& cachePtr) {
+  auto arrayListPtr = apache::geode::client::CacheableArrayList::create();
+  auto length = v8Array->Length();
+  for (decltype(length) i = 0; i < length; i++) {
     arrayListPtr->push_back(gemfireValue(v8Array->Get(i), cachePtr));
   }
   return arrayListPtr;
 }
 
-apache::geode::client::CacheableDatePtr gemfireValue(
+std::shared_ptr<apache::geode::client::CacheableDate> gemfireValue(
     const Local<Date>& v8Date) {
-  long int millisecondsSinceEpoch = v8Date->NumberValue();
-  std::chrono::milliseconds dur(millisecondsSinceEpoch);
-  std::chrono::time_point<std::chrono::system_clock> dt(dur);
-  return CacheableDate::create(dt);
+  auto millisecondsSinceEpoch = v8Date->IntegerValue();
+  auto time = std::chrono::system_clock::time_point(
+      std::chrono::milliseconds(millisecondsSinceEpoch));
+  return apache::geode::client::CacheableDate::create(time);
 }
 
-CacheableKeyPtr gemfireKey(const Local<Value>& v8Value,
-                           const CachePtr& cachePtr) {
-  CacheableKeyPtr keyPtr;
+std::shared_ptr<apache::geode::client::CacheableKey> gemfireKey(
+    const Local<Value>& v8Value, apache::geode::client::Cache& cachePtr) {
+  std::shared_ptr<apache::geode::client::CacheableKey> keyPtr;
   try {
-    keyPtr = gemfireValue(v8Value, cachePtr);
-  } catch (const ClassCastException& exception) {
-    return NULLPTR;
+    keyPtr = std::dynamic_pointer_cast<apache::geode::client::CacheableKey>(
+        gemfireValue(v8Value, cachePtr));
+  } catch (const apache::geode::client::ClassCastException& exception) {
+    return nullptr;
   }
 
   return keyPtr;
 }
 
-VectorOfCacheableKeyPtr gemfireKeys(const Local<Array>& v8Value,
-                                    const CachePtr& cachePtr) {
-  VectorOfCacheableKeyPtr vectorPtr(new VectorOfCacheableKey());
+std::vector<shared_ptr<apache::geode::client::CacheableKey>> gemfireKeys(
+    const Local<Array>& v8Value, apache::geode::client::Cache& cachePtr) {
+  auto length = v8Value->Length();
+  std::vector<shared_ptr<apache::geode::client::CacheableKey>> vectorPtr;
+  vectorPtr.reserve(length);
 
-  for (unsigned int i = 0; i < v8Value->Length(); i++) {
-    CacheableKeyPtr keyPtr = gemfireKey(v8Value->Get(i), cachePtr);
-
-    if (keyPtr == NULLPTR) {
-      return NULLPTR;
-    } else {
-      vectorPtr->push_back(keyPtr);
-    }
+  for (decltype(length) i = 0; i < length; i++) {
+    auto keyPtr = gemfireKey(v8Value->Get(i), cachePtr);
+    vectorPtr.push_back(keyPtr);
   }
 
   return vectorPtr;
 }
 
-HashMapOfCacheablePtr gemfireHashMap(const Local<Object>& v8Object,
-                                     const CachePtr& cachePtr) {
+apache::geode::client::HashMapOfCacheable gemfireHashMap(
+    const Local<Object>& v8Object, apache::geode::client::Cache& cachePtr) {
   Nan::HandleScope scope;
 
-  HashMapOfCacheablePtr hashMapPtr(new HashMapOfCacheable());
+  auto v8Keys = v8Object->GetOwnPropertyNames();
+  auto length = v8Keys->Length();
 
-  Local<Array> v8Keys(v8Object->GetOwnPropertyNames());
-  unsigned int length = v8Keys->Length();
+  apache::geode::client::HashMapOfCacheable hashMapPtr;
+  hashMapPtr.reserve(length);
 
-  for (unsigned int i = 0; i < length; i++) {
-    Local<String> v8Key(v8Keys->Get(i)->ToString());
+  for (decltype(length) i = 0; i < length; i++) {
+    auto v8Key = v8Keys->Get(i)->ToString();
 
-    CacheableKeyPtr keyPtr(gemfireKey(v8Key, cachePtr));
-    CacheablePtr valuePtr(gemfireValue(v8Object->Get(v8Key), cachePtr));
+    auto keyPtr = gemfireKey(v8Key, cachePtr);
+    auto valuePtr = gemfireValue(v8Object->Get(v8Key), cachePtr);
 
-    if (valuePtr == NULLPTR) {
-      return NULLPTR;
-    }
-
-    hashMapPtr->insert(keyPtr, valuePtr);
+    hashMapPtr.emplace(keyPtr, valuePtr);
   }
 
   return hashMapPtr;
 }
 
-CacheableVectorPtr gemfireVector(const Local<Array>& v8Array,
-                                 const CachePtr& cachePtr) {
+std::shared_ptr<apache::geode::client::CacheableVector> gemfireVector(
+    const Local<Array>& v8Array, apache::geode::client::Cache& cachePtr) {
   Nan::HandleScope scope;
 
-  unsigned int length = v8Array->Length();
-  CacheableVectorPtr vectorPtr = CacheableVector::create();
+  auto length = v8Array->Length();
+  auto vectorPtr = apache::geode::client::CacheableVector::create();
 
-  for (unsigned int i = 0; i < length; i++) {
+  for (decltype(length) i = 0; i < length; i++) {
     vectorPtr->push_back(gemfireValue(v8Array->Get(i), cachePtr));
   }
 
   return vectorPtr;
 }
 
-Local<Value> v8Value(const CacheablePtr& valuePtr) {
+Local<Value> v8Value(
+    const std::shared_ptr<apache::geode::client::Cacheable>& valuePtr) {
   Nan::EscapableHandleScope scope;
 
-  if (valuePtr == NULLPTR) {
+  if (valuePtr == nullptr) {
     return scope.Escape(Nan::Null());
   }
 
-  int typeId = valuePtr->typeId();
-  switch (typeId) {
-    case GeodeTypeIds::CacheableASCIIString:
-    case GeodeTypeIds::CacheableASCIIStringHuge:
-    case GeodeTypeIds::CacheableString:
-    case GeodeTypeIds::CacheableStringHuge: {
-      CacheableStringPtr cacheableStringPtr =
-          static_cast<CacheableStringPtr>(valuePtr);
-      if (cacheableStringPtr->isWideString()) {
-        return scope.Escape(v8StringFromWstring(cacheableStringPtr->asWChar()));
+  using namespace apache::geode::client;
+  using namespace apache::geode::client::internal;
+
+  if (auto dataSerializablePrimitive =
+          std::dynamic_pointer_cast<DataSerializablePrimitive>(valuePtr)) {
+    auto dsCode = dataSerializablePrimitive->getDsCode();
+    switch (dsCode) {
+      case DSCode::CacheableASCIIString:
+      case DSCode::CacheableASCIIStringHuge:
+      case DSCode::CacheableString:
+      case DSCode::CacheableStringHuge: {
+        auto cacheableStringPtr =
+            std::dynamic_pointer_cast<CacheableString>(valuePtr);
+        return scope.Escape(
+            Nan::New(cacheableStringPtr->value()).ToLocalChecked());
       }
-      // else
-      return scope.Escape(
-          Nan::New(cacheableStringPtr->asChar()).ToLocalChecked());
+      case DSCode::CacheableBoolean:
+        return scope.Escape(Nan::New(
+            (std::dynamic_pointer_cast<CacheableBoolean>(valuePtr))->value()));
+      case DSCode::CacheableDouble:
+        return scope.Escape(Nan::New(
+            (std::dynamic_pointer_cast<CacheableDouble>(valuePtr))->value()));
+      case DSCode::CacheableFloat:
+        return scope.Escape(Nan::New(
+            (std::dynamic_pointer_cast<CacheableFloat>(valuePtr))->value()));
+      case DSCode::CacheableInt16:
+        return scope.Escape(Nan::New(
+            (std::dynamic_pointer_cast<CacheableInt16>(valuePtr))->value()));
+      case DSCode::CacheableInt32:
+        return scope.Escape(Nan::New(
+            (std::dynamic_pointer_cast<CacheableInt32>(valuePtr))->value()));
+      case DSCode::CacheableInt64:
+        return scope.Escape(
+            v8Value(std::dynamic_pointer_cast<CacheableInt64>(valuePtr)));
+      case DSCode::CacheableDate:
+        return scope.Escape(
+            v8Value(std::dynamic_pointer_cast<CacheableDate>(valuePtr)));
+      case DSCode::CacheableObjectArray:
+        return scope.Escape(
+            v8Array(std::dynamic_pointer_cast<CacheableObjectArray>(valuePtr)));
+      case DSCode::CacheableArrayList:
+        return scope.Escape(
+            v8Array(std::dynamic_pointer_cast<CacheableArrayList>(valuePtr)));
+      case DSCode::CacheableVector:
+        return scope.Escape(
+            v8Array(std::dynamic_pointer_cast<CacheableVector>(valuePtr)));
+      case DSCode::CacheableHashMap:
+        return scope.Escape(
+            v8Object(std::dynamic_pointer_cast<CacheableHashMap>(valuePtr)));
+      case DSCode::CacheableHashSet:
+        return scope.Escape(
+            v8Array(std::dynamic_pointer_cast<CacheableHashSet>(valuePtr)));
+      default:
+        std::stringstream errorMessageStream;
+        errorMessageStream
+            << "Unable to serialize value from GemFire; unknown DSCode: "
+            << static_cast<int8_t>(dsCode);
+        Nan::ThrowError(errorMessageStream.str().c_str());
     }
-    case GeodeTypeIds::CacheableBoolean:
-      return scope.Escape(
-          Nan::New((static_cast<CacheableBooleanPtr>(valuePtr))->value()));
-    case GeodeTypeIds::CacheableDouble:
-      return scope.Escape(
-          Nan::New((static_cast<CacheableDoublePtr>(valuePtr))->value()));
-    case GeodeTypeIds::CacheableFloat:
-      return scope.Escape(
-          Nan::New((static_cast<CacheableFloatPtr>(valuePtr))->value()));
-    case GeodeTypeIds::CacheableInt16:
-      return scope.Escape(
-          Nan::New((static_cast<CacheableInt16Ptr>(valuePtr))->value()));
-    case GeodeTypeIds::CacheableInt32:
-      return scope.Escape(
-          Nan::New((static_cast<CacheableInt32Ptr>(valuePtr))->value()));
-    case GeodeTypeIds::CacheableInt64:
-      return scope.Escape(v8Value(static_cast<CacheableInt64Ptr>(valuePtr)));
-    case GeodeTypeIds::CacheableDate:
-      return scope.Escape(v8Value(static_cast<CacheableDatePtr>(valuePtr)));
-    case GeodeTypeIds::CacheableUndefined:
-      return scope.Escape(Nan::Undefined());
-    case GeodeTypeIds::Struct:
-      return scope.Escape(v8Value(static_cast<StructPtr>(valuePtr)));
-    case GeodeTypeIds::CacheableObjectArray:
-      return scope.Escape(
-          v8Array(static_cast<CacheableObjectArrayPtr>(valuePtr)));
-    case GeodeTypeIds::CacheableArrayList:
-      return scope.Escape(
-          v8Array(static_cast<CacheableArrayListPtr>(valuePtr)));
-    case GeodeTypeIds::CacheableVector:
-      return scope.Escape(v8Array(static_cast<CacheableVectorPtr>(valuePtr)));
-    case GeodeTypeIds::CacheableHashMap:
-      return scope.Escape(v8Object(static_cast<CacheableHashMapPtr>(valuePtr)));
-    case GeodeTypeIds::CacheableHashSet:
-      return scope.Escape(v8Array(static_cast<CacheableHashSetPtr>(valuePtr)));
-    case 0:
-      try {
-        UserFunctionExecutionExceptionPtr functionExceptionPtr =
-            static_cast<UserFunctionExecutionExceptionPtr>(valuePtr);
-
-        return scope.Escape(v8Error(functionExceptionPtr));
-      } catch (ClassCastException& exception) {
-        // fall through to default error case
-      }
-      break;
+  } else if (auto dataSerializableFixedId =
+                 std::dynamic_pointer_cast<DataSerializableFixedId>(valuePtr)) {
+    auto fixedId = dataSerializableFixedId->getDSFID();
+    switch (fixedId) {
+      case DSFid::CacheableUndefined:
+        return scope.Escape(Nan::Undefined());
+      case DSFid::Struct:
+        return scope.Escape(
+            v8Value(std::dynamic_pointer_cast<Struct>(valuePtr)));
+      default:
+        std::stringstream errorMessageStream;
+        errorMessageStream
+            << "Unable to serialize value from GemFire; unknown FixedId: "
+            << static_cast<int32_t>(fixedId);
+        Nan::ThrowError(errorMessageStream.str().c_str());
+    }
+  } else if (auto userFunctionExecutionException =
+                 std::dynamic_pointer_cast<UserFunctionExecutionException>(
+                     valuePtr)) {
+    return scope.Escape(v8Error(userFunctionExecutionException));
+  } else if (auto pdxInstance =
+                 std::dynamic_pointer_cast<PdxInstance>(valuePtr)) {
+    return scope.Escape(v8Value(pdxInstance));
   }
 
-  if (typeId > GeodeTypeIds::CacheableStringHuge) {
-    // We are assuming these are Pdx
-    return scope.Escape(v8Value(static_cast<PdxInstancePtr>(valuePtr)));
-  }
   std::stringstream errorMessageStream;
-  errorMessageStream
-      << "Unable to serialize value from GemFire; unknown typeId: " << typeId;
+  errorMessageStream << "Unable to serialize value from GemFire: "
+                     << valuePtr->toString();
   Nan::ThrowError(errorMessageStream.str().c_str());
   return scope.Escape(Nan::Undefined());
 }
 
-Local<Value> v8Value(const PdxInstancePtr& pdxInstance) {
+Local<Value> v8Value(
+    const std::shared_ptr<apache::geode::client::PdxInstance>& pdxInstance) {
   Nan::EscapableHandleScope scope;
 
   try {
-    CacheableStringArrayPtr gemfireKeys(pdxInstance->getFieldNames());
+    auto gemfireKeys = pdxInstance->getFieldNames();
 
-    if (gemfireKeys == NULLPTR) {
+    if (gemfireKeys == nullptr) {
       return scope.Escape(Nan::New<Object>());
     }
 
-    Local<Object> v8Object = Nan::New<Object>();
-    int length = gemfireKeys->length();
+    auto v8Object = Nan::New<Object>();
+    auto length = gemfireKeys->length();
 
-    for (int i = 0; i < length; i++) {
-      const char* key = gemfireKeys[i]->asChar();
-      CacheablePtr value;
+    for (decltype(length) i = 0; i < length; i++) {
+      auto key = (*gemfireKeys)[i]->value();
+      std::shared_ptr<apache::geode::client::Cacheable> value;
       if (pdxInstance->getFieldType(key) ==
           apache::geode::client::PdxFieldTypes::OBJECT_ARRAY) {
-        CacheableObjectArrayPtr valueArray;
-        pdxInstance->getField(key, valueArray);
-        value = valueArray;
+        value = pdxInstance->getCacheableObjectArrayField(key);
       } else {
-        pdxInstance->getField(key, value);
+        value = pdxInstance->getCacheableField(key);
       }
       Nan::Set(v8Object, Nan::New(key).ToLocalChecked(), v8Value(value));
     }
@@ -387,13 +399,17 @@ Local<Value> v8Value(const PdxInstancePtr& pdxInstance) {
   }
 }
 
-Local<Value> v8Value(const CacheableInt64Ptr& valuePtr) {
+Local<Value> v8Value(
+    const std::shared_ptr<apache::geode::client::CacheableInt64>& valuePtr) {
   Nan::EscapableHandleScope scope;
 
   static const int64_t maxSafeInteger = pow(2, 53) - 1;
   static const int64_t minSafeInteger = -1 * maxSafeInteger;
 
-  int64_t value = static_cast<CacheableInt64Ptr>(valuePtr)->value();
+  auto value =
+      static_cast<std::shared_ptr<apache::geode::client::CacheableInt64>>(
+          valuePtr)
+          ->value();
   if (value > maxSafeInteger) {
     ConsoleWarn(
         "Received 64 bit integer from GemFire greater than "
@@ -407,42 +423,52 @@ Local<Value> v8Value(const CacheableInt64Ptr& valuePtr) {
   return scope.Escape(Nan::New<Number>(value));
 }
 
-Local<Date> v8Value(const CacheableDatePtr& datePtr) {
+Local<Date> v8Value(
+    const std::shared_ptr<apache::geode::client::CacheableDate>& datePtr) {
   Nan::EscapableHandleScope scope;
   double epochMillis = datePtr->milliseconds();
   return scope.Escape(Nan::New<Date>(epochMillis).ToLocalChecked());
 }
 
-Local<Value> v8Value(const CacheableKeyPtr& keyPtr) {
-  return v8Value(static_cast<CacheablePtr>(keyPtr));
+Local<Value> v8Value(
+    const std::shared_ptr<apache::geode::client::CacheableKey>& keyPtr) {
+  return v8Value(
+      static_cast<std::shared_ptr<apache::geode::client::Cacheable>>(keyPtr));
 }
 
-Local<Object> v8Value(const StructPtr& structPtr) {
+Local<Object> v8Value(
+    const std::shared_ptr<apache::geode::client::Struct>& structPtr) {
   Nan::EscapableHandleScope scope;
   Local<Object> v8Object(Nan::New<Object>());
-  unsigned int length = structPtr->length();
-  for (unsigned int i = 0; i < length; i++) {
+  auto length = structPtr->size();
+  for (decltype(length) i = 0; i < length; i++) {
     Nan::Set(v8Object, Nan::New(structPtr->getFieldName(i)).ToLocalChecked(),
              v8Value((*structPtr)[i]));
   }
   return scope.Escape(v8Object);
 }
 
-Local<Object> v8Value(const HashMapOfCacheablePtr& hashMapPtr) {
+Local<Object> v8Value(
+    const apache::geode::client::HashMapOfCacheable& hashMapPtr) {
   return v8Object(hashMapPtr);
 }
 
-Local<Array> v8Value(const VectorOfCacheablePtr& vectorPtr) {
+Local<Array> v8Value(
+    const std::vector<std::shared_ptr<apache::geode::client::Cacheable>>&
+        vectorPtr) {
   return v8Array(vectorPtr);
 }
 
-Local<Array> v8Value(const VectorOfCacheableKeyPtr& vectorPtr) {
+Local<Array> v8Value(
+    const std::vector<std::shared_ptr<apache::geode::client::CacheableKey>>&
+        vectorPtr) {
   return v8Array(vectorPtr);
 }
 
-Local<Object> v8Value(const RegionEntryPtr& regionEntryPtr) {
+Local<Object> v8Value(
+    const std::shared_ptr<apache::geode::client::RegionEntry>& regionEntryPtr) {
   Nan::EscapableHandleScope scope;
-  Local<Object> v8Object(Nan::New<Object>());
+  auto v8Object = Nan::New<Object>();
   Nan::Set(v8Object, Nan::New("key").ToLocalChecked(),
            v8Value(regionEntryPtr->getKey()));
   Nan::Set(v8Object, Nan::New("value").ToLocalChecked(),
@@ -450,17 +476,21 @@ Local<Object> v8Value(const RegionEntryPtr& regionEntryPtr) {
   return scope.Escape(v8Object);
 }
 
-Local<Array> v8Value(const VectorOfRegionEntry& vectorOfRegionEntries) {
+Local<Array> v8Value(
+    const std::vector<std::shared_ptr<apache::geode::client::RegionEntry>>&
+        vectorOfRegionEntries) {
   Nan::EscapableHandleScope scope;
-  Local<Array> v8Array(Nan::New<Array>());
-  unsigned int length = vectorOfRegionEntries.length();
-  for (unsigned int i = 0; i < length; i++) {
+  auto v8Array = Nan::New<Array>();
+  auto length = vectorOfRegionEntries.size();
+  for (decltype(length) i = 0; i < length; i++) {
     Nan::Set(v8Array, i, v8Value(vectorOfRegionEntries[i]));
   }
   return scope.Escape(v8Array);
 }
 
-Local<Object> v8Value(const SelectResultsPtr& selectResultsPtr) {
+Local<Object> v8Value(
+    const std::shared_ptr<apache::geode::client::SelectResults>&
+        selectResultsPtr) {
   Nan::EscapableHandleScope scope;
 
   Local<Object> selectResults(SelectResults::NewInstance(selectResultsPtr));

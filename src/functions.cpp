@@ -21,14 +21,17 @@ namespace node_gemfire {
 
 class ExecuteFunctionWorker {
  public:
-  ExecuteFunctionWorker(const ExecutionPtr &executionPtr,
-                        const std::string &functionName,
-                        const CacheablePtr &functionArguments,
-                        const CacheableVectorPtr &functionFilter,
-                        const Local<Object> &emitterHandle)
+  ExecuteFunctionWorker(
+      apache::geode::client::Execution executionPtr,
+      const std::string &functionName,
+      const std::shared_ptr<apache::geode::client::Cacheable>
+          &functionArguments,
+      const std::shared_ptr<apache::geode::client::CacheableVector>
+          &functionFilter,
+      const Local<Object> &emitterHandle)
       : resultStream(new ResultStream(this, (uv_async_cb)DataAsyncCallback,
                                       (uv_async_cb)EndAsyncCallback)),
-        executionPtr(executionPtr),
+        executionPtr(std::move(executionPtr)),
         functionName(functionName),
         functionArguments(functionArguments),
         functionFilter(functionFilter),
@@ -69,26 +72,27 @@ class ExecuteFunctionWorker {
 
   void Execute() {
     try {
-      if (functionArguments != NULLPTR) {
-        executionPtr = executionPtr->withArgs(functionArguments);
+      if (functionArguments != nullptr) {
+        executionPtr = executionPtr.withArgs(functionArguments);
       }
 
-      if (functionFilter != NULLPTR) {
-        executionPtr = executionPtr->withFilter(functionFilter);
+      if (functionFilter != nullptr) {
+        executionPtr = executionPtr.withFilter(functionFilter);
       }
 
-      ResultCollectorPtr resultCollectorPtr(
+      auto resultCollectorPtr = std::shared_ptr<StreamingResultCollector>(
           new StreamingResultCollector(resultStream));
-      executionPtr = executionPtr->withCollector(resultCollectorPtr);
+      executionPtr = executionPtr.withCollector(resultCollectorPtr);
 
-      executionPtr->execute(functionName.c_str());
+      executionPtr.execute(functionName);
     } catch (const apache::geode::client::Exception &exception) {
-      exceptionPtr = exception.clone();
+      exceptionPtr = std::unique_ptr<apache::geode::client::Exception>(
+          new apache::geode::client::Exception(exception));
     }
   }
 
   void ExecuteComplete() {
-    if (exceptionPtr != NULLPTR) {
+    if (exceptionPtr != nullptr) {
       Nan::HandleScope scope;
       emitError(Nan::New(emitter), v8Error(*exceptionPtr));
       ended = true;
@@ -103,10 +107,9 @@ class ExecuteFunctionWorker {
 
     Local<Object> eventEmitter(Nan::New(emitter));
 
-    CacheableVectorPtr resultsPtr(resultStream->nextResults());
-    for (CacheableVector::Iterator iterator(resultsPtr->begin());
-         iterator != resultsPtr->end(); ++iterator) {
-      Local<Value> result(v8Value(*iterator));
+    auto resultsPtr = resultStream->nextResults();
+    for (auto &&iterator : *resultsPtr) {
+      Local<Value> result(v8Value(iterator));
 
       if (result->IsNativeError()) {
         emitError(eventEmitter, result);
@@ -138,20 +141,20 @@ class ExecuteFunctionWorker {
  private:
   ResultStream *resultStream;
 
-  ExecutionPtr executionPtr;
+  apache::geode::client::Execution executionPtr;
   std::string functionName;
-  CacheablePtr functionArguments;
-  CacheableVectorPtr functionFilter;
+  std::shared_ptr<apache::geode::client::Cacheable> functionArguments;
+  std::shared_ptr<apache::geode::client::CacheableVector> functionFilter;
   Nan::Persistent<Object> emitter;
-  apache::geode::client::ExceptionPtr exceptionPtr;
+  std::unique_ptr<apache::geode::client::Exception> exceptionPtr;
 
   bool ended;
   bool executeCompleted;
 };
 
 Local<Value> executeFunction(Nan::NAN_METHOD_ARGS_TYPE info,
-                             const CachePtr &cachePtr,
-                             const ExecutionPtr &executionPtr) {
+                             apache::geode::client::Cache &cachePtr,
+                             apache::geode::client::Execution &executionPtr) {
   Nan::EscapableHandleScope scope;
 
   if (info.Length() == 0 || !info[0]->IsString()) {
@@ -198,48 +201,47 @@ Local<Value> executeFunction(Nan::NAN_METHOD_ARGS_TYPE info,
 
   std::string functionName(*Nan::Utf8String(info[0]));
 
-  CacheablePtr functionArguments;
+  std::shared_ptr<apache::geode::client::Cacheable> functionArguments;
   if (v8FunctionArguments.IsEmpty() || v8FunctionArguments->IsUndefined()) {
-    functionArguments = NULLPTR;
+    functionArguments = nullptr;
   } else {
     functionArguments = gemfireValue(v8FunctionArguments, cachePtr);
   }
 
-  CacheableVectorPtr functionFilter;
+  std::shared_ptr<apache::geode::client::CacheableVector> functionFilter;
   if (v8FunctionFilter.IsEmpty() || v8FunctionFilter->IsUndefined()) {
-    functionFilter = NULLPTR;
+    functionFilter = nullptr;
   } else {
     functionFilter = gemfireVector(v8FunctionFilter.As<Array>(), cachePtr);
   }
 
   if (synchronousFlag) {
-    CacheableVectorPtr returnValue = CacheableVector::create();
-    apache::geode::client::ExceptionPtr exceptionPtr;
-    ExecutionPtr synchronousExecutionPtr;
+    std::shared_ptr<apache::geode::client::CacheableVector> returnValue =
+        CacheableVector::create();
+    std::unique_ptr<apache::geode::client::Exception> exceptionPtr;
+    apache::geode::client::Execution synchronousExceptionPtr;
 
     try {
-      if (functionArguments != NULLPTR) {
-        synchronousExecutionPtr = executionPtr->withArgs(functionArguments);
+      if (functionArguments != nullptr) {
+        synchronousExceptionPtr = executionPtr.withArgs(functionArguments);
       }
 
-      if (functionFilter != NULLPTR) {
-        synchronousExecutionPtr =
-            synchronousExecutionPtr->withFilter(functionFilter);
+      if (functionFilter != nullptr) {
+        synchronousExceptionPtr =
+            synchronousExceptionPtr.withFilter(functionFilter);
       }
 
-      ResultCollectorPtr resultCollectorPtr;
-      resultCollectorPtr =
-          synchronousExecutionPtr->execute(functionName.c_str());
+      auto resultCollectorPtr = synchronousExceptionPtr.execute(functionName);
 
-      CacheableVectorPtr resultsPtr(resultCollectorPtr->getResult());
-      for (CacheableVector::Iterator iterator(resultsPtr->begin());
-           iterator != resultsPtr->end(); ++iterator) {
-        returnValue->push_back(*iterator);
+      auto resultsPtr = resultCollectorPtr->getResult();
+      for (auto &&iterator : *resultsPtr) {
+        returnValue->push_back(iterator);
       }
     } catch (const apache::geode::client::Exception &exception) {
-      exceptionPtr = exception.clone();
+      exceptionPtr = std::unique_ptr<apache::geode::client::Exception>(
+          new apache::geode::client::Exception(exception));
     }
-    if (returnValue->length() == 1) {
+    if (returnValue->size() == 1) {
       return scope.Escape(v8Array(returnValue)->Get(0));
     } else {
       return scope.Escape(v8Array(returnValue));
@@ -251,9 +253,9 @@ Local<Value> executeFunction(Nan::NAN_METHOD_ARGS_TYPE info,
             .As<Function>());
     Local<Object> eventEmitter(eventEmitterConstructor->NewInstance());
 
-    ExecuteFunctionWorker *worker =
-        new ExecuteFunctionWorker(executionPtr, functionName, functionArguments,
-                                  functionFilter, eventEmitter);
+    ExecuteFunctionWorker *worker = new ExecuteFunctionWorker(
+        std::move(executionPtr), functionName, functionArguments,
+        functionFilter, eventEmitter);
 
     uv_queue_work(uv_default_loop(), &worker->request,
                   ExecuteFunctionWorker::Execute,

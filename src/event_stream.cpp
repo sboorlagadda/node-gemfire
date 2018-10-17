@@ -27,9 +27,7 @@ std::vector<EventStream::Event *> EventStream::nextEvents() {
 
   std::vector<Event *> returnValue;
 
-  for (std::vector<Event *>::iterator iterator(eventVector.begin());
-       iterator != eventVector.end(); ++iterator) {
-    Event *event(*iterator);
+  for (auto &&event : eventVector) {
     returnValue.push_back(event);
   }
 
@@ -44,22 +42,22 @@ std::vector<EventStream::Event *> EventStream::nextEvents() {
 Local<Object> EventStream::Event::v8Object() {
   Nan::EscapableHandleScope scope;
 
-  Local<Object> eventPayload = Nan::New<Object>();
+  auto eventPayload = Nan::New<Object>();
 
   Nan::Set(eventPayload, Nan::New("key").ToLocalChecked(),
-           v8Value(entryEventPtr->getKey()));
+           v8Value(entryEvent->getKey()));
   Nan::Set(eventPayload, Nan::New("oldValue").ToLocalChecked(),
-           v8Value(entryEventPtr->getOldValue()));
+           v8Value(entryEvent->getOldValue()));
   Nan::Set(eventPayload, Nan::New("newValue").ToLocalChecked(),
-           v8Value(entryEventPtr->getNewValue()));
+           v8Value(entryEvent->getNewValue()));
 
   return scope.Escape(eventPayload);
 }
 
 std::string EventStream::Event::getName() { return eventName; }
 
-apache::geode::client::RegionPtr EventStream::Event::getRegion() {
-  return entryEventPtr->getRegion();
+std::shared_ptr<apache::geode::client::Region> EventStream::Event::getRegion() {
+  return entryEvent->getRegion();
 }
 
 }  // namespace node_gemfire

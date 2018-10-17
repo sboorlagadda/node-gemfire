@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include <geode/GeodeCppCache.hpp>
-
 #include "exceptions.hpp"
 
 using namespace v8;
@@ -18,7 +16,7 @@ void GemfireWorker::Execute() {
     ExecuteGemfireWork();
   } catch (apache::geode::client::Exception& exception) {
     // TODO : need to figure out logging for debug level info.
-    SetError(exception.getName(), exception.getMessage());
+    SetError(exception.getName().c_str(), exception.getMessage().c_str());
   }
 }
 void GemfireWorker::HandleErrorCallback() {

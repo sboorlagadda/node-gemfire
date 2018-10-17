@@ -12,8 +12,17 @@ class StreamingResultCollector : public apache::geode::client::ResultCollector {
   explicit StreamingResultCollector(ResultStream* resultStream)
       : ResultCollector(), resultStream(resultStream) {}
 
-  virtual void addResult(apache::geode::client::CacheablePtr& resultPtr);
-  virtual void endResults();
+  virtual std::shared_ptr<apache::geode::client::CacheableVector> getResult(
+      std::chrono::milliseconds) override {
+    return nullptr;
+  }
+
+  void addResult(const std::shared_ptr<apache::geode::client::Cacheable>&
+                     resultOfSingleExecution) override;
+
+  void endResults() override;
+
+  void clearResults() override {}
 
  private:
   ResultStream* resultStream;

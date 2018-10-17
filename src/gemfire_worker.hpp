@@ -5,8 +5,6 @@
 
 #include <string>
 
-#include <geode/GeodeCppCache.hpp>
-
 namespace node_gemfire {
 
 class GemfireWorker : public Nan::AsyncWorker {

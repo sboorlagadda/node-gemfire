@@ -9,7 +9,12 @@
 
 #include <geode/Cache.hpp>
 #include <geode/CacheFactory.hpp>
+#include <geode/Execution.hpp>
+#include <geode/FunctionService.hpp>
+#include <geode/Query.hpp>
+#include <geode/QueryService.hpp>
 #include <geode/Region.hpp>
+#include <geode/RegionFactory.hpp>
 
 #include "conversions.hpp"
 #include "dependencies.hpp"
@@ -20,14 +25,13 @@
 #include "region_shortcuts.hpp"
 
 using namespace v8;
-using namespace apache::geode::client;
 
 namespace node_gemfire {
 
-static CachePtr closeThisCache = NULLPTR;
+static std::shared_ptr<apache::geode::client::Cache> closeThisCache = nullptr;
 
-static void closeCacheAtExit(void *arg) {
-  if (closeThisCache != NULLPTR && !closeThisCache->isClosed()) {
+static void closeCacheAtExit(void* arg) {
+  if (closeThisCache != nullptr && !closeThisCache->isClosed()) {
     closeThisCache->close();
   }
 }
@@ -57,55 +61,54 @@ NAN_MODULE_INIT(Cache::Init) {
            Nan::GetFunction(constructorTemplate).ToLocalChecked());
 }
 
-v8::Local<v8::Object> Cache::NewInstance(CachePtr cachePtr) {
+v8::Local<v8::Object> Cache::NewInstance(
+    std::shared_ptr<apache::geode::client::Cache> cache) {
   Nan::EscapableHandleScope scope;
   const unsigned int argc = 0;
   Local<Value> argv[argc] = {};
   Local<v8::Function> cons = Nan::New(Cache::constructor());
   Local<Object> instance = Nan::NewInstance(cons, argc, argv).ToLocalChecked();
-  Cache *cache = new Cache(cachePtr);
-  cache->Wrap(instance);
+  auto cacheWrapper = new Cache(cache);
+  cacheWrapper->Wrap(instance);
   return scope.Escape(instance);
 }
 
 NAN_METHOD(Cache::Close) {
   Nan::HandleScope scope;
 
-  Cache *cache = Nan::ObjectWrap::Unwrap<Cache>(info.This());
-  if (cache != NULL) {
+  auto cache = Nan::ObjectWrap::Unwrap<Cache>(info.This());
+  if (cache != nullptr) {
     cache->close();
   }
 }
 
 void Cache::close() {
-  if (!cachePtr->isClosed()) {
-    cachePtr->close();
+  if (!cache->isClosed()) {
+    cache->close();
   }
 }
 
 class ExecuteQueryWorker : public GemfireWorker {
  public:
-  ExecuteQueryWorker(QueryPtr queryPtr, CacheableVectorPtr queryParamsPtr,
-                     Nan::Callback *callback)
-      : GemfireWorker(callback),
-        queryPtr(queryPtr),
-        queryParamsPtr(queryParamsPtr) {}
+  ExecuteQueryWorker(
+      std::shared_ptr<apache::geode::client::Query> query,
+      std::shared_ptr<apache::geode::client::CacheableVector> queryParams,
+      Nan::Callback* callback)
+      : GemfireWorker(callback), query(query), queryParams(queryParams) {}
 
-  void ExecuteGemfireWork() {
-    selectResultsPtr = queryPtr->execute(queryParamsPtr);
-  }
+  void ExecuteGemfireWork() { selectResults = query->execute(queryParams); }
 
   void HandleOKCallback() {
     Nan::HandleScope scope;
 
     static const int argc = 2;
-    Local<Value> argv[2] = {Nan::Undefined(), v8Value(selectResultsPtr)};
+    Local<Value> argv[2] = {Nan::Undefined(), v8Value(selectResults)};
     callback->Call(argc, argv);
   }
 
-  QueryPtr queryPtr;
-  CacheableVectorPtr queryParamsPtr;
-  SelectResultsPtr selectResultsPtr;
+  std::shared_ptr<apache::geode::client::Query> query;
+  std::shared_ptr<apache::geode::client::CacheableVector> queryParams;
+  std::shared_ptr<apache::geode::client::SelectResults> selectResults;
 };
 
 NAN_METHOD(Cache::ExecuteQuery) {
@@ -154,28 +157,29 @@ NAN_METHOD(Cache::ExecuteQuery) {
     return;
   }
 
-  Cache *cache = Nan::ObjectWrap::Unwrap<Cache>(info.This());
-  CachePtr cachePtr(cache->cachePtr);
+  auto cacheWrapper = Nan::ObjectWrap::Unwrap<Cache>(info.This());
+  auto cache = cacheWrapper->cache;
 
-  if (cache->cachePtr->isClosed()) {
+  if (cache->isClosed()) {
     Nan::ThrowError("Cannot execute query; cache is closed.");
     return;
   }
 
-  QueryServicePtr queryServicePtr;
-  CacheableVectorPtr queryParamsPtr = NULLPTR;
+  std::shared_ptr<apache::geode::client::QueryService> queryService;
+  std::shared_ptr<apache::geode::client::CacheableVector> geodeQueryParams =
+      nullptr;
 
   std::string queryString(*Nan::Utf8String(info[0]));
 
   try {
     if (poolNameValue->IsUndefined()) {
-      queryServicePtr = cachePtr->getQueryService();
+      queryService = cache->getQueryService();
     } else {
       std::string poolName(*Nan::Utf8String(poolNameValue));
-      PoolPtr poolPtr(getPool(poolNameValue));
+      auto pool = getPool(poolNameValue);
 
-      if (poolPtr == NULLPTR) {
-        std::string poolName(*Nan::Utf8String(poolNameValue));
+      if (pool == nullptr) {
+        auto poolName = *Nan::Utf8String(poolNameValue);
         std::stringstream errorMessageStream;
         errorMessageStream << "executeQuery: `" << poolName
                            << "` is not a valid pool name";
@@ -183,22 +187,21 @@ NAN_METHOD(Cache::ExecuteQuery) {
         return;
       }
 
-      queryServicePtr = cachePtr->getQueryService(poolName.c_str());
+      queryService = cache->getQueryService(poolName.c_str());
     }
-  } catch (const apache::geode::client::Exception &exception) {
+  } catch (const apache::geode::client::Exception& exception) {
     ThrowGemfireException(exception);
     return;
   }
   if (!(queryParams.IsEmpty() || queryParams->IsUndefined())) {
-    queryParamsPtr = gemfireVector(queryParams.As<Array>(), cachePtr);
+    geodeQueryParams = gemfireVector(queryParams.As<Array>(), *cache);
   }
 
-  QueryPtr queryPtr(queryServicePtr->newQuery(queryString.c_str()));
+  auto query = queryService->newQuery(queryString);
 
-  Nan::Callback *callback = new Nan::Callback(callbackFunction);
+  auto callback = new Nan::Callback(callbackFunction);
 
-  ExecuteQueryWorker *worker =
-      new ExecuteQueryWorker(queryPtr, queryParamsPtr, callback);
+  auto worker = new ExecuteQueryWorker(query, geodeQueryParams, callback);
   Nan::AsyncQueueWorker(worker);
 
   info.GetReturnValue().Set(info.This());
@@ -242,32 +245,30 @@ NAN_METHOD(Cache::CreateRegion) {
   Local<Value> regionPoolName(
       regionConfiguration->Get(Nan::New("poolName").ToLocalChecked()));
 
-  RegionShortcut regionShortcut(
-      getRegionShortcut(*Nan::Utf8String(regionType)));
+  auto regionShortcut = getRegionShortcut(*Nan::Utf8String(regionType));
   if (regionShortcut == invalidRegionShortcut) {
     Nan::ThrowError(
         "createRegion: This type is not a valid GemFire client region type");
     return;
   }
 
-  Cache *cache = Nan::ObjectWrap::Unwrap<Cache>(info.This());
-  CachePtr cachePtr(cache->cachePtr);
+  auto cacheWrapper = Nan::ObjectWrap::Unwrap<Cache>(info.This());
+  std::shared_ptr<apache::geode::client::Cache> cache(cacheWrapper->cache);
 
-  RegionPtr regionPtr;
+  std::shared_ptr<apache::geode::client::Region> region;
   try {
-    RegionFactoryPtr regionFactoryPtr(
-        cachePtr->createRegionFactory(regionShortcut));
+    auto regionFactory = cache->createRegionFactory(regionShortcut);
 
     if (!regionPoolName->IsUndefined()) {
-      regionFactoryPtr->setPoolName(*Nan::Utf8String(regionPoolName));
+      regionFactory.setPoolName(*Nan::Utf8String(regionPoolName));
     }
 
-    regionPtr = regionFactoryPtr->create(*Nan::Utf8String(info[0]));
-  } catch (const apache::geode::client::Exception &exception) {
+    region = regionFactory.create(*Nan::Utf8String(info[0]));
+  } catch (const apache::geode::client::Exception& exception) {
     ThrowGemfireException(exception);
     return;
   }
-  info.GetReturnValue().Set(Region::NewInstance(regionPtr));
+  info.GetReturnValue().Set(Region::NewInstance(region));
 }
 
 NAN_METHOD(Cache::GetRegion) {
@@ -286,29 +287,25 @@ NAN_METHOD(Cache::GetRegion) {
     return;
   }
 
-  Cache *cache = Nan::ObjectWrap::Unwrap<Cache>(info.This());
-  CachePtr cachePtr(cache->cachePtr);
-  RegionPtr regionPtr(cachePtr->getRegion(*Nan::Utf8String(info[0])));
+  auto cache = Nan::ObjectWrap::Unwrap<Cache>(info.This())->cache;
+  auto region = cache->getRegion(*Nan::Utf8String(info[0]));
 
-  if (regionPtr == NULLPTR) {
+  if (region == nullptr) {
     info.GetReturnValue().Set(Nan::Undefined());
   } else {
-    info.GetReturnValue().Set(Region::NewInstance(regionPtr));
+    info.GetReturnValue().Set(Region::NewInstance(region));
   }
 }
 
 NAN_METHOD(Cache::RootRegions) {
   Nan::HandleScope scope;
 
-  Cache *cache = Nan::ObjectWrap::Unwrap<Cache>(info.This());
+  auto cache = Nan::ObjectWrap::Unwrap<Cache>(info.This())->cache;
+  auto regions = cache->rootRegions();
+  auto size = regions.size();
+  auto rootRegions = Nan::New<Array>(size);
 
-  VectorOfRegion regions;
-  cache->cachePtr->rootRegions(regions);
-
-  unsigned int size = regions.size();
-  Local<Array> rootRegions(Nan::New<Array>(size));
-
-  for (unsigned int i = 0; i < size; i++) {
+  for (decltype(size) i = 0; i < size; i++) {
     rootRegions->Set(i, Region::NewInstance(regions[i]));
   }
 
@@ -323,19 +320,16 @@ NAN_METHOD(Cache::Inspect) {
 NAN_METHOD(Cache::ExecuteFunction) {
   Nan::HandleScope scope;
 
-  Cache *cache = Nan::ObjectWrap::Unwrap<Cache>(info.This());
-  CachePtr cachePtr(cache->cachePtr);
-  if (cachePtr->isClosed()) {
+  auto cache = Nan::ObjectWrap::Unwrap<Cache>(info.This())->cache;
+  if (cache->isClosed()) {
     Nan::ThrowError("Cannot execute function; cache is closed.");
     return;
   }
 
-  Local<Value> poolNameValue(Nan::Undefined());
+  Local<Value> poolNameValue = Nan::Undefined();
   if (info[1]->IsObject() && !info[1]->IsArray()) {
-    Local<Object> optionsObject = info[1]->ToObject();
-
-    Local<Value> filter =
-        optionsObject->Get(Nan::New("filter").ToLocalChecked());
+    auto optionsObject = info[1]->ToObject();
+    auto filter = optionsObject->Get(Nan::New("filter").ToLocalChecked());
     if (!filter->IsUndefined()) {
       Nan::ThrowError(
           "You cannot pass a filter to executeFunction for a Cache.");
@@ -346,10 +340,10 @@ NAN_METHOD(Cache::ExecuteFunction) {
   }
 
   try {
-    PoolPtr poolPtr(getPool(poolNameValue));
+    auto pool = getPool(poolNameValue);
 
-    if (poolPtr == NULLPTR) {
-      std::string poolName(*Nan::Utf8String(poolNameValue));
+    if (pool == nullptr) {
+      auto poolName = *Nan::Utf8String(poolNameValue);
       std::stringstream errorMessageStream;
       errorMessageStream << "executeFunction: `" << poolName
                          << "` is not a valid pool name";
@@ -357,35 +351,10 @@ NAN_METHOD(Cache::ExecuteFunction) {
       return;
     }
 
-    ExecutionPtr executionPtr(FunctionService::onServer(poolPtr));
-    info.GetReturnValue().Set(executeFunction(info, cachePtr, executionPtr));
-  } catch (const apache::geode::client::Exception &exception) {
+    auto execution = apache::geode::client::FunctionService::onServers(pool);
+    info.GetReturnValue().Set(executeFunction(info, *cache, execution));
+  } catch (const apache::geode::client::Exception& exception) {
     ThrowGemfireException(exception);
-    return;
-  }
-}
-
-PoolPtr Cache::getPool(const Handle<Value> &poolNameValue) {
-  if (!poolNameValue->IsUndefined()) {
-    std::string poolName(*Nan::Utf8String(poolNameValue));
-    return PoolManager::find(poolName.c_str());
-  } else {
-    // FIXME: Workaround for the situation where there are no regions yet.
-    //
-    // As of GemFire Native Client 8.0.0.0, if no regions have ever been
-    // present, it's possible that the cachePtr has no default pool set.
-    // Attempting to execute a function on this cachePtr will throw a
-    // NullPointerException.
-    //
-    // To avoid this problem, we grab the first pool we can find and execute the
-    // function on that pool's poolPtr instead of on the cachePtr. Note that
-    // this might not be the best choice of poolPtr at the moment.
-    //
-    // See https://www.pivotaltracker.com/story/show/82079194 for the original
-    // bug.
-    HashMapOfPools hashMapOfPools(PoolManager::getAll());
-    HashMapOfPools::Iterator iterator(hashMapOfPools.begin());
-    return iterator.second();
   }
 }
 

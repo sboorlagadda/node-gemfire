@@ -16,12 +16,6 @@ using namespace apache::geode::client;
 
 namespace node_gemfire {
 
-NAN_METHOD(Connected) {
-  Nan::HandleScope scope;
-  DistributedSystemPtr distributedSystemPtr = DistributedSystem::getInstance();
-  info.GetReturnValue().Set(Nan::New(distributedSystemPtr->isConnected()));
-}
-
 NAN_METHOD(Initialize) {
   Nan::HandleScope scope;
 
@@ -33,13 +27,9 @@ NAN_METHOD(Initialize) {
 
   Nan::DefineOwnProperty(
       gemfire, Nan::New("gemfireVersion").ToLocalChecked(),
-      Nan::New(std::string(apache::geode::client::CacheFactory::getVersion()))
+      Nan::New(apache::geode::client::CacheFactory::getVersion())
           .ToLocalChecked(),
       static_cast<PropertyAttribute>(ReadOnly | DontDelete));
-
-  Nan::DefineOwnProperty(gemfire, Nan::New("connected").ToLocalChecked(),
-                         Nan::New<FunctionTemplate>(Connected)->GetFunction(),
-                         static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
   node_gemfire::Cache::Init(gemfire);
   node_gemfire::Region::Init(gemfire);

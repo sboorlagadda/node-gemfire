@@ -14,12 +14,11 @@ class CacheFactory : public Nan::ObjectWrap {
   // Called from binding.cpp to initialize the system
   static void Init(v8::Local<v8::Object> exports);
 
-  std::shared_ptr<apache::geode::client::CacheFactory> cacheFactory;
+  apache::geode::client::CacheFactory cacheFactory;
 
  protected:
-  explicit CacheFactory(std::shared_ptr<apache::geode::client::CacheFactory> cacheFactory) :
-    cacheFactory(cacheFactory),
-    callback(NULL) {}
+  explicit CacheFactory(apache::geode::client::CacheFactory cacheFactory)
+      : cacheFactory(cacheFactory), callback(NULL) {}
 
   virtual ~CacheFactory() {}
   static NAN_METHOD(New);

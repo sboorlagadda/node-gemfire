@@ -6,7 +6,9 @@
 #include <string>
 #include <vector>
 
+#include <geode/FunctionService.hpp>
 #include <geode/Region.hpp>
+#include <geode/internal/chrono/duration.hpp>
 
 #include "cache.hpp"
 #include "conversions.hpp"
@@ -18,7 +20,6 @@
 #include "region_event_registry.hpp"
 
 using namespace v8;
-using namespace apache::geode::client;
 
 namespace node_gemfire {
 
@@ -33,7 +34,8 @@ inline Nan::Callback* getCallback(const Local<Value>& value) {
   return new Nan::Callback(Local<Function>::Cast(value));
 }
 
-v8::Local<v8::Object> Region::NewInstance(RegionPtr regionPtr) {
+v8::Local<v8::Object> Region::NewInstance(
+    std::shared_ptr<apache::geode::client::Region> regionPtr) {
   Nan::EscapableHandleScope scope;
   const unsigned int argc = 0;
   Local<Value> argv[argc] = {};
@@ -80,8 +82,8 @@ class ClearWorker : public GemfireEventedWorker {
     // Workaround: We don't want to call clear on the region if the cache is
     // closed. After cache is cleared, getCache() will throw an exception,
     // whereas clear() causes a segfault.
-    region->regionPtr->getRegionService()->isClosed();
-    region->regionPtr->clear();
+    region->region->getRegionService().isClosed();
+    region->region->clear();
   }
   Region* region;
 };
@@ -93,8 +95,8 @@ NAN_METHOD(Region::Clear) {
     Nan::ThrowError("You must pass a function as the callback to clear().");
     return;
   }
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  Nan::Callback* callback = getCallback(info[0]);
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto callback = getCallback(info[0]);
   ClearWorker* worker = new ClearWorker(info.Holder(), region, callback);
   Nan::AsyncQueueWorker(worker);
 
@@ -108,34 +110,21 @@ std::string unableToPutValueError(Local<Value> v8Value) {
   return errorMessageStream.str();
 }
 
-CachePtr getCacheFromRegion(RegionPtr regionPtr) {
+apache::geode::client::Cache& getCacheFromRegion(
+    std::shared_ptr<apache::geode::client::Region> regionPtr) {
   Nan::HandleScope scope;
   try {
-    // TODO: need to fix this since it gets any instance and doesn't use the
-    // region.
-    CachePtr cachePtr = CacheFactory::getAnyInstance();
-    if (cachePtr == NULLPTR || cachePtr->isClosed()) {
-      if (regionPtr != NULLPTR) {
-        std::string msg("Region name ");
-        msg += regionPtr->getName();
-        msg += " is invalid because the Cache is Closed.";
-        Nan::ThrowError(Nan::New(msg).ToLocalChecked());
-      } else {
-        Nan::ThrowError(Nan::New("Cache is closed.").ToLocalChecked());
-      }
-      return NULLPTR;
-    }
-    return CacheFactory::getAnyInstance();
-  } catch (const RegionDestroyedException& exception) {
+    return regionPtr->getCache();
+  } catch (const apache::geode::client::RegionDestroyedException& exception) {
     ThrowGemfireException(exception);
   }
-  return NULLPTR;
 }
 
 class PutWorker : public GemfireEventedWorker {
  public:
   PutWorker(const Local<Object>& regionObject, Region* region,
-            const CacheableKeyPtr& keyPtr, const CacheablePtr& valuePtr,
+            const std::shared_ptr<apache::geode::client::CacheableKey>& keyPtr,
+            const std::shared_ptr<apache::geode::client::Cacheable>& valuePtr,
             Nan::Callback* callback)
       : GemfireEventedWorker(regionObject, callback),
         region(region),
@@ -143,19 +132,19 @@ class PutWorker : public GemfireEventedWorker {
         valuePtr(valuePtr) {}
 
   void ExecuteGemfireWork() {
-    if (keyPtr == NULLPTR) {
+    if (keyPtr == nullptr) {
       SetError("InvalidKeyError", "Invalid GemFire key.");
       return;
     }
-    if (valuePtr == NULLPTR) {
+    if (valuePtr == nullptr) {
       SetError("InvalidValueError", "Invalid GemFire value.");
       return;
     }
-    region->regionPtr->put(keyPtr, valuePtr);
+    region->region->put(keyPtr, valuePtr);
   }
   Region* region;
-  CacheableKeyPtr keyPtr;
-  CacheablePtr valuePtr;
+  std::shared_ptr<apache::geode::client::CacheableKey> keyPtr;
+  std::shared_ptr<apache::geode::client::Cacheable> valuePtr;
 };
 
 NAN_METHOD(Region::Put) {
@@ -171,17 +160,16 @@ NAN_METHOD(Region::Put) {
     return;
   }
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
 
-  CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
-  if (cachePtr == NULLPTR) {
-    return;
-  }
+  auto& cache = region->region->getCache();
 
-  CacheableKeyPtr keyPtr(gemfireKey(info[0], cachePtr));
-  CacheablePtr valuePtr(gemfireValue(info[1], cachePtr));
+  std::shared_ptr<apache::geode::client::CacheableKey> keyPtr(
+      gemfireKey(info[0], cache));
+  std::shared_ptr<apache::geode::client::Cacheable> valuePtr(
+      gemfireValue(info[1], cache));
 
-  Nan::Callback* callback = getCallback(info[2]);
+  auto callback = getCallback(info[2]);
   PutWorker* putWorker =
       new PutWorker(info.Holder(), region, keyPtr, valuePtr, callback);
   Nan::AsyncQueueWorker(putWorker);
@@ -200,29 +188,25 @@ NAN_METHOD(Region::PutSync) {
       return;
     }
 
-    Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+    auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
 
-    CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
-    if (cachePtr == NULLPTR) {
-      info.GetReturnValue().Set(Nan::Undefined());
-      return;
-    }
+    auto& cachePtr = region->region->getCache();
 
-    CacheableKeyPtr keyPtr(gemfireKey(info[0], cachePtr));
-    if (keyPtr == NULLPTR) {
+    auto keyPtr = gemfireKey(info[0], cachePtr);
+    if (keyPtr == nullptr) {
       Nan::ThrowError("Invalid GemFire key.");
       info.GetReturnValue().Set(Nan::Undefined());
       return;
     }
 
-    CacheablePtr valuePtr(gemfireValue(info[1], cachePtr));
-    if (valuePtr == NULLPTR) {
+    auto valuePtr = gemfireValue(info[1], cachePtr);
+    if (valuePtr == nullptr) {
       Nan::ThrowError("Invalid GemFire value.");
       info.GetReturnValue().Set(Nan::Undefined());
       return;
     }
 
-    region->regionPtr->put(keyPtr, valuePtr);
+    region->region->put(keyPtr, valuePtr);
     info.GetReturnValue().Set(info.Holder());
   } catch (apache::geode::client::Exception& exception) {
     ThrowGemfireException(exception);
@@ -232,12 +216,13 @@ NAN_METHOD(Region::PutSync) {
 
 class GetWorker : public GemfireWorker {
  public:
-  GetWorker(Nan::Callback* callback, const RegionPtr& regionPtr,
-            const CacheableKeyPtr& keyPtr)
+  GetWorker(Nan::Callback* callback,
+            const std::shared_ptr<apache::geode::client::Region>& regionPtr,
+            const std::shared_ptr<apache::geode::client::CacheableKey>& keyPtr)
       : GemfireWorker(callback), regionPtr(regionPtr), keyPtr(keyPtr) {}
 
   void ExecuteGemfireWork() {
-    if (keyPtr == NULLPTR) {
+    if (keyPtr == nullptr) {
       SetError("InvalidKeyError", "Invalid GemFire key.");
       return;
     }
@@ -246,7 +231,7 @@ class GetWorker : public GemfireWorker {
 
     // TODO switching up behavior no error for key not found
     /*
-    if (valuePtr == NULLPTR) {
+    if (valuePtr == nullptr) {
       SetError("KeyNotFoundError", "Key not found in region.");
     }
     */
@@ -258,9 +243,9 @@ class GetWorker : public GemfireWorker {
     Nan::Call(*callback, 2, argv);
   }
 
-  RegionPtr regionPtr;
-  CacheableKeyPtr keyPtr;
-  CacheablePtr valuePtr;
+  std::shared_ptr<apache::geode::client::Region> regionPtr;
+  std::shared_ptr<apache::geode::client::CacheableKey> keyPtr;
+  std::shared_ptr<apache::geode::client::Cacheable> valuePtr;
 };
 
 NAN_METHOD(Region::Get) {
@@ -278,18 +263,14 @@ NAN_METHOD(Region::Get) {
     return;
   }
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  RegionPtr regionPtr(region->regionPtr);
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto regionPtr = region->region;
+  auto& cachePtr = regionPtr->getCache();
 
-  CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
-  if (cachePtr == NULLPTR) {
-    return;
-  }
+  auto keyPtr = gemfireKey(info[0], cachePtr);
 
-  CacheableKeyPtr keyPtr(gemfireKey(info[0], cachePtr));
-
-  Nan::Callback* callback = new Nan::Callback(info[1].As<Function>());
-  GetWorker* getWorker = new GetWorker(callback, regionPtr, keyPtr);
+  auto callback = new Nan::Callback(info[1].As<Function>());
+  auto getWorker = new GetWorker(callback, regionPtr, keyPtr);
   Nan::AsyncQueueWorker(getWorker);
 
   info.GetReturnValue().Set(info.Holder());
@@ -297,7 +278,7 @@ NAN_METHOD(Region::Get) {
 
 NAN_METHOD(Region::GetSync) {
   Nan::HandleScope scope;
-  CacheablePtr valuePtr = NULLPTR;
+  std::shared_ptr<apache::geode::client::Cacheable> valuePtr = nullptr;
   try {
     unsigned int argsLength = info.Length();
     if (argsLength == 0) {
@@ -306,15 +287,11 @@ NAN_METHOD(Region::GetSync) {
       return;
     }
 
-    Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-    RegionPtr regionPtr(region->regionPtr);
+    auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+    auto regionPtr = region->region;
 
-    CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
-    if (cachePtr == NULLPTR) {
-      info.GetReturnValue().Set(Nan::Undefined());
-      return;
-    }
-    CacheableKeyPtr keyPtr(gemfireKey(info[0], cachePtr));
+    auto& cachePtr = regionPtr->getCache();
+    auto keyPtr = gemfireKey(info[0], cachePtr);
     valuePtr = regionPtr->get(keyPtr);
   } catch (apache::geode::client::Exception& exception) {
     ThrowGemfireException(exception);
@@ -324,26 +301,21 @@ NAN_METHOD(Region::GetSync) {
 
 class GetAllWorker : public GemfireWorker {
  public:
-  GetAllWorker(const RegionPtr& regionPtr,
-               const VectorOfCacheableKeyPtr& gemfireKeysPtr,
-               Nan::Callback* callback)
+  GetAllWorker(
+      const std::shared_ptr<apache::geode::client::Region>& regionPtr,
+      const std::vector<std::shared_ptr<apache::geode::client::CacheableKey>>&
+          gemfireKeysPtr,
+      Nan::Callback* callback)
       : GemfireWorker(callback),
         regionPtr(regionPtr),
         gemfireKeysPtr(gemfireKeysPtr) {}
 
   void ExecuteGemfireWork() {
-    resultsPtr = new HashMapOfCacheable();
-
-    if (gemfireKeysPtr == NULLPTR) {
-      SetError("InvalidKeyError", "Invalid GemFire key.");
+    if (gemfireKeysPtr.empty()) {
       return;
     }
 
-    if (gemfireKeysPtr->size() == 0) {
-      return;
-    }
-
-    regionPtr->getAll(*gemfireKeysPtr, resultsPtr, NULLPTR);
+    resultsPtr = regionPtr->getAll(gemfireKeysPtr);
   }
 
   void HandleOKCallback() {
@@ -354,9 +326,10 @@ class GetAllWorker : public GemfireWorker {
   }
 
  private:
-  RegionPtr regionPtr;
-  VectorOfCacheableKeyPtr gemfireKeysPtr;
-  HashMapOfCacheablePtr resultsPtr;
+  std::shared_ptr<apache::geode::client::Region> regionPtr;
+  std::vector<std::shared_ptr<apache::geode::client::CacheableKey>>
+      gemfireKeysPtr;
+  apache::geode::client::HashMapOfCacheable resultsPtr;
 };
 
 NAN_METHOD(Region::GetAll) {
@@ -378,20 +351,16 @@ NAN_METHOD(Region::GetAll) {
     return;
   }
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  RegionPtr regionPtr(region->regionPtr);
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto regionPtr = region->region;
 
-  CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
-  if (cachePtr == NULLPTR) {
-    return;
-  }
+  auto& cachePtr = regionPtr->getCache();
 
-  VectorOfCacheableKeyPtr gemfireKeysPtr(
-      gemfireKeys(Local<Array>::Cast(info[0]), cachePtr));
+  auto gemfireKeysPtr = gemfireKeys(Local<Array>::Cast(info[0]), cachePtr);
 
-  Nan::Callback* callback = new Nan::Callback(info[1].As<Function>());
+  auto callback = new Nan::Callback(info[1].As<Function>());
 
-  GetAllWorker* worker = new GetAllWorker(regionPtr, gemfireKeysPtr, callback);
+  auto worker = new GetAllWorker(regionPtr, gemfireKeysPtr, callback);
   Nan::AsyncQueueWorker(worker);
 
   info.GetReturnValue().Set(info.Holder());
@@ -405,27 +374,16 @@ NAN_METHOD(Region::GetAllSync) {
       info.GetReturnValue().Set(Nan::Undefined());
       return;
     }
-    Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-    RegionPtr regionPtr(region->regionPtr);
-    CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
+    auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+    auto regionPtr = region->region;
+    auto& cachePtr = regionPtr->getCache();
 
-    if (cachePtr == NULLPTR) {
-      info.GetReturnValue().Set(Nan::Undefined());
-      return;
-    }
-
-    VectorOfCacheableKeyPtr gemfireKeysPtr(
-        gemfireKeys(Local<Array>::Cast(info[0]), cachePtr));
-    if (gemfireKeysPtr == NULLPTR) {
-      Nan::ThrowError("Invalid GemFire key.");
-      info.GetReturnValue().Set(Nan::Undefined());
-      return;
-    }
-    HashMapOfCacheablePtr resultsPtr(new HashMapOfCacheable());
-    if (gemfireKeysPtr->size() == 0) {
-      info.GetReturnValue().Set(v8Object(resultsPtr));
+    auto gemfireKeysPtr = gemfireKeys(Local<Array>::Cast(info[0]), cachePtr);
+    if (gemfireKeysPtr.empty()) {
+      info.GetReturnValue().Set(
+          v8Object(apache::geode::client::HashMapOfCacheable{}));
     } else {
-      regionPtr->getAll(*gemfireKeysPtr, resultsPtr, NULLPTR);
+      auto resultsPtr = regionPtr->getAll(gemfireKeysPtr);
       info.GetReturnValue().Set(v8Value(resultsPtr));
     }
   } catch (apache::geode::client::Exception& exception) {
@@ -436,23 +394,19 @@ NAN_METHOD(Region::GetAllSync) {
 
 class PutAllWorker : public GemfireEventedWorker {
  public:
-  PutAllWorker(const Local<Object>& regionObject, const RegionPtr& regionPtr,
-               const HashMapOfCacheablePtr& hashMapPtr, Nan::Callback* callback)
+  PutAllWorker(const Local<Object>& regionObject,
+               const std::shared_ptr<apache::geode::client::Region>& regionPtr,
+               apache::geode::client::HashMapOfCacheable hashMapPtr,
+               Nan::Callback* callback)
       : GemfireEventedWorker(regionObject, callback),
         regionPtr(regionPtr),
-        hashMapPtr(hashMapPtr) {}
+        hashMapPtr(std::move(hashMapPtr)) {}
 
-  void ExecuteGemfireWork() {
-    if (hashMapPtr == NULLPTR) {
-      SetError("InvalidValueError", "Invalid GemFire value.");
-      return;
-    }
-    regionPtr->putAll(*hashMapPtr);
-  }
+  void ExecuteGemfireWork() { regionPtr->putAll(hashMapPtr); }
 
  private:
-  RegionPtr regionPtr;
-  HashMapOfCacheablePtr hashMapPtr;
+  std::shared_ptr<apache::geode::client::Region> regionPtr;
+  apache::geode::client::HashMapOfCacheable hashMapPtr;
 };
 
 NAN_METHOD(Region::PutAll) {
@@ -465,18 +419,13 @@ NAN_METHOD(Region::PutAll) {
     Nan::ThrowError("You must pass a function as the callback to putAll().");
     return;
   }
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  RegionPtr regionPtr(region->regionPtr);
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto regionPtr = region->region;
+  auto& cachePtr = regionPtr->getCache();
 
-  CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
-  if (cachePtr == NULLPTR) {
-    return;
-  }
-
-  HashMapOfCacheablePtr hashMapPtr(
-      gemfireHashMap(info[0]->ToObject(), cachePtr));
-  Nan::Callback* callback = getCallback(info[1]);
-  PutAllWorker* worker =
+  auto hashMapPtr = gemfireHashMap(info[0]->ToObject(), cachePtr);
+  auto callback = getCallback(info[1]);
+  auto worker =
       new PutAllWorker(info.Holder(), regionPtr, hashMapPtr, callback);
   Nan::AsyncQueueWorker(worker);
 
@@ -492,22 +441,12 @@ NAN_METHOD(Region::PutAllSync) {
       return;
     }
 
-    Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-    RegionPtr regionPtr(region->regionPtr);
+    auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+    auto regionPtr = region->region;
+    auto& cachePtr = regionPtr->getCache();
 
-    CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
-    if (cachePtr == NULLPTR) {
-      info.GetReturnValue().Set(Nan::Undefined());
-      return;
-    }
-    HashMapOfCacheablePtr hashMapPtr(
-        gemfireHashMap(info[0]->ToObject(), cachePtr));
-    if (hashMapPtr == NULLPTR) {
-      Nan::ThrowError("Invalid GemFire value.");
-      info.GetReturnValue().Set(Nan::Undefined());
-      return;
-    }
-    regionPtr->putAll(*hashMapPtr);
+    auto hashMapPtr = gemfireHashMap(info[0]->ToObject(), cachePtr);
+    regionPtr->putAll(hashMapPtr);
     info.GetReturnValue().Set(info.Holder());
   } catch (const apache::geode::client::Exception& exception) {
     ThrowGemfireException(exception);
@@ -517,27 +456,30 @@ NAN_METHOD(Region::PutAllSync) {
 
 class RemoveWorker : public GemfireEventedWorker {
  public:
-  RemoveWorker(const Local<Object>& regionObject, const RegionPtr& regionPtr,
-               const CacheableKeyPtr& keyPtr, Nan::Callback* callback)
+  RemoveWorker(
+      const Local<Object>& regionObject,
+      const std::shared_ptr<apache::geode::client::Region>& regionPtr,
+      const std::shared_ptr<apache::geode::client::CacheableKey>& keyPtr,
+      Nan::Callback* callback)
       : GemfireEventedWorker(regionObject, callback),
         regionPtr(regionPtr),
         keyPtr(keyPtr) {}
 
   void ExecuteGemfireWork() {
-    if (keyPtr == NULLPTR) {
+    if (keyPtr == nullptr) {
       SetError("InvalidKeyError", "Invalid GemFire key.");
       return;
     }
 
     try {
       regionPtr->destroy(keyPtr);
-    } catch (const EntryNotFoundException& exception) {
+    } catch (const apache::geode::client::EntryNotFoundException& exception) {
       SetError("KeyNotFoundError", "Key not found in region.");
     }
   }
 
-  RegionPtr regionPtr;
-  CacheableKeyPtr keyPtr;
+  std::shared_ptr<apache::geode::client::Region> regionPtr;
+  std::shared_ptr<apache::geode::client::CacheableKey> keyPtr;
 };
 
 NAN_METHOD(Region::Remove) {
@@ -553,18 +495,13 @@ NAN_METHOD(Region::Remove) {
     return;
   }
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  RegionPtr regionPtr(region->regionPtr);
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto regionPtr = region->region;
+  auto& cachePtr = regionPtr->getCache();
 
-  CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
-  if (cachePtr == NULLPTR) {
-    return;
-  }
-
-  CacheableKeyPtr keyPtr(gemfireKey(info[0], cachePtr));
-  Nan::Callback* callback = getCallback(info[1]);
-  RemoveWorker* worker =
-      new RemoveWorker(info.Holder(), regionPtr, keyPtr, callback);
+  auto keyPtr = gemfireKey(info[0], cachePtr);
+  auto callback = getCallback(info[1]);
+  auto worker = new RemoveWorker(info.Holder(), regionPtr, keyPtr, callback);
   Nan::AsyncQueueWorker(worker);
 
   info.GetReturnValue().Set(info.Holder());
@@ -573,16 +510,13 @@ NAN_METHOD(Region::Remove) {
 NAN_METHOD(Region::ExecuteFunction) {
   Nan::HandleScope scope;
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  RegionPtr regionPtr(region->regionPtr);
-
-  CachePtr cachePtr(getCacheFromRegion(region->regionPtr));
-  if (cachePtr == NULLPTR) {
-    return;
-  }
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto regionPtr = region->region;
+  auto& cachePtr = regionPtr->getCache();
 
   try {
-    ExecutionPtr executionPtr(FunctionService::onRegion(regionPtr));
+    auto executionPtr =
+        apache::geode::client::FunctionService::onRegion(regionPtr);
     info.GetReturnValue().Set(executeFunction(info, cachePtr, executionPtr));
   } catch (const apache::geode::client::Exception& exception) {
     ThrowGemfireException(exception);
@@ -593,10 +527,10 @@ NAN_METHOD(Region::ExecuteFunction) {
 NAN_METHOD(Region::Inspect) {
   Nan::HandleScope scope;
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  RegionPtr regionPtr(region->regionPtr);
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto regionPtr = region->region;
 
-  const char* name = regionPtr->getName();
+  auto name = regionPtr->getName();
 
   std::stringstream inspectStream;
   inspectStream << "[Region name=\"" << name << "\"]";
@@ -607,8 +541,8 @@ NAN_METHOD(Region::Inspect) {
 NAN_GETTER(Region::Name) {
   Nan::HandleScope scope;
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  RegionPtr regionPtr(region->regionPtr);
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto regionPtr = region->region;
 
   info.GetReturnValue().Set(Nan::New(regionPtr->getName()).ToLocalChecked());
 }
@@ -616,90 +550,90 @@ NAN_GETTER(Region::Name) {
 NAN_GETTER(Region::Attributes) {
   Nan::HandleScope scope;
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  RegionPtr regionPtr(region->regionPtr);
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto regionPtr = region->region;
 
-  RegionAttributesPtr regionAttributesPtr(regionPtr->getAttributes());
+  auto& regionAttributesPtr = regionPtr->getAttributes();
 
   Local<Object> returnValue(Nan::New<Object>());
 
   Nan::DefineOwnProperty(returnValue,
                          Nan::New("cachingEnabled").ToLocalChecked(),
-                         Nan::New(regionAttributesPtr->getCachingEnabled()),
+                         Nan::New(regionAttributesPtr.getCachingEnabled()),
                          static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
   Nan::DefineOwnProperty(
       returnValue, Nan::New("clientNotificationEnabled").ToLocalChecked(),
-      Nan::New(regionAttributesPtr->getClientNotificationEnabled()),
+      Nan::New(regionAttributesPtr.getClientNotificationEnabled()),
       static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
   Nan::DefineOwnProperty(
       returnValue, Nan::New("concurrencyChecksEnabled").ToLocalChecked(),
-      Nan::New(regionAttributesPtr->getConcurrencyChecksEnabled()),
+      Nan::New(regionAttributesPtr.getConcurrencyChecksEnabled()),
       static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
   Nan::DefineOwnProperty(returnValue,
                          Nan::New("concurrencyLevel").ToLocalChecked(),
-                         Nan::New(regionAttributesPtr->getConcurrencyLevel()),
+                         Nan::New(regionAttributesPtr.getConcurrencyLevel()),
                          static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
-  Nan::DefineOwnProperty(returnValue, Nan::New("diskPolicy").ToLocalChecked(),
-                         Nan::New(DiskPolicyType::fromOrdinal(
-                                      regionAttributesPtr->getDiskPolicy()))
-                             .ToLocalChecked(),
-                         static_cast<PropertyAttribute>(ReadOnly | DontDelete));
+  Nan::DefineOwnProperty(
+      returnValue, Nan::New("diskPolicy").ToLocalChecked(),
+      Nan::New(static_cast<int32_t>(regionAttributesPtr.getDiskPolicy())),
+      static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
-  Nan::DefineOwnProperty(returnValue,
-                         Nan::New("entryIdleTimeout").ToLocalChecked(),
-                         Nan::New(regionAttributesPtr->getEntryIdleTimeout()),
-                         static_cast<PropertyAttribute>(ReadOnly | DontDelete));
+  Nan::DefineOwnProperty(
+      returnValue, Nan::New("entryIdleTimeout").ToLocalChecked(),
+      Nan::New(apache::geode::internal::chrono::duration::to_string(
+                   regionAttributesPtr.getEntryIdleTimeout()))
+          .ToLocalChecked(),
+      static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
-  Nan::DefineOwnProperty(returnValue,
-                         Nan::New("entryTimeToLive").ToLocalChecked(),
-                         Nan::New(regionAttributesPtr->getEntryTimeToLive()),
-                         static_cast<PropertyAttribute>(ReadOnly | DontDelete));
+  Nan::DefineOwnProperty(
+      returnValue, Nan::New("entryTimeToLive").ToLocalChecked(),
+      Nan::New(apache::geode::internal::chrono::duration::to_string(
+                   regionAttributesPtr.getEntryTimeToLive()))
+          .ToLocalChecked(),
+      static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
   Nan::DefineOwnProperty(returnValue,
                          Nan::New("initialCapacity").ToLocalChecked(),
-                         Nan::New(regionAttributesPtr->getInitialCapacity()),
+                         Nan::New(regionAttributesPtr.getInitialCapacity()),
                          static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
   Nan::DefineOwnProperty(returnValue, Nan::New("loadFactor").ToLocalChecked(),
-                         Nan::New(regionAttributesPtr->getLoadFactor()),
+                         Nan::New(regionAttributesPtr.getLoadFactor()),
                          static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
   Nan::DefineOwnProperty(returnValue,
                          Nan::New("lruEntriesLimit").ToLocalChecked(),
-                         Nan::New(regionAttributesPtr->getLruEntriesLimit()),
+                         Nan::New(regionAttributesPtr.getLruEntriesLimit()),
                          static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
   Nan::DefineOwnProperty(
       returnValue, Nan::New("lruEvicationAction").ToLocalChecked(),
-      Nan::New(ExpirationAction::fromOrdinal(
-                   regionAttributesPtr->getLruEvictionAction()))
+      Nan::New(
+          static_cast<int32_t>(regionAttributesPtr.getLruEvictionAction())),
+      static_cast<PropertyAttribute>(ReadOnly | DontDelete));
+
+  Nan::DefineOwnProperty(
+      returnValue, Nan::New("poolName").ToLocalChecked(),
+      Nan::New(regionAttributesPtr.getPoolName()).ToLocalChecked(),
+      static_cast<PropertyAttribute>(ReadOnly | DontDelete));
+
+  Nan::DefineOwnProperty(
+      returnValue, Nan::New("regionIdleTimeout").ToLocalChecked(),
+      Nan::New(apache::geode::internal::chrono::duration::to_string(
+                   regionAttributesPtr.getRegionIdleTimeout()))
           .ToLocalChecked(),
       static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
-  const char* poolName = regionAttributesPtr->getPoolName();
-  if (poolName == NULL) {
-    Nan::DefineOwnProperty(
-        returnValue, Nan::New("poolName").ToLocalChecked(), Nan::Null(),
-        static_cast<PropertyAttribute>(ReadOnly | DontDelete));
-  } else {
-    Nan::DefineOwnProperty(
-        returnValue, Nan::New("poolName").ToLocalChecked(),
-        Nan::New(poolName).ToLocalChecked(),
-        static_cast<PropertyAttribute>(ReadOnly | DontDelete));
-  }
-  Nan::DefineOwnProperty(returnValue,
-                         Nan::New("regionIdleTimeout").ToLocalChecked(),
-                         Nan::New(regionAttributesPtr->getRegionIdleTimeout()),
-                         static_cast<PropertyAttribute>(ReadOnly | DontDelete));
-
-  Nan::DefineOwnProperty(returnValue,
-                         Nan::New("regionTimeToLive").ToLocalChecked(),
-                         Nan::New(regionAttributesPtr->getRegionTimeToLive()),
-                         static_cast<PropertyAttribute>(ReadOnly | DontDelete));
+  Nan::DefineOwnProperty(
+      returnValue, Nan::New("regionTimeToLive").ToLocalChecked(),
+      Nan::New(apache::geode::internal::chrono::duration::to_string(
+                   regionAttributesPtr.getRegionTimeToLive()))
+          .ToLocalChecked(),
+      static_cast<PropertyAttribute>(ReadOnly | DontDelete));
 
   info.GetReturnValue().Set(returnValue);
 }
@@ -707,9 +641,9 @@ NAN_GETTER(Region::Attributes) {
 template <typename T>
 class AbstractQueryWorker : public GemfireWorker {
  public:
-  AbstractQueryWorker(const RegionPtr& regionPtr,
-                      const std::string& queryPredicate,
-                      Nan::Callback* callback)
+  AbstractQueryWorker(
+      const std::shared_ptr<apache::geode::client::Region>& regionPtr,
+      const std::string& queryPredicate, Nan::Callback* callback)
       : GemfireWorker(callback),
         regionPtr(regionPtr),
         queryPredicate(queryPredicate) {}
@@ -719,31 +653,34 @@ class AbstractQueryWorker : public GemfireWorker {
     Nan::Call(*callback, 2, argv);
   }
 
-  RegionPtr regionPtr;
+  std::shared_ptr<apache::geode::client::Region> regionPtr;
   std::string queryPredicate;
   T resultPtr;
 };
 
-class QueryWorker : public AbstractQueryWorker<SelectResultsPtr> {
+class QueryWorker : public AbstractQueryWorker<
+                        std::shared_ptr<apache::geode::client::SelectResults>> {
  public:
-  QueryWorker(const RegionPtr& regionPtr, const std::string& queryPredicate,
-              Nan::Callback* callback)
-      : AbstractQueryWorker<SelectResultsPtr>(regionPtr, queryPredicate,
-                                              callback) {}
+  QueryWorker(const std::shared_ptr<apache::geode::client::Region>& regionPtr,
+              const std::string& queryPredicate, Nan::Callback* callback)
+      : AbstractQueryWorker<
+            std::shared_ptr<apache::geode::client::SelectResults>>(
+            regionPtr, queryPredicate, callback) {}
 
-  void ExecuteGemfireWork() {
-    resultPtr = regionPtr->query(queryPredicate.c_str());
-  }
+  void ExecuteGemfireWork() { resultPtr = regionPtr->query(queryPredicate); }
 
   static std::string name() { return "query()"; }
 };
 
-class SelectValueWorker : public AbstractQueryWorker<CacheablePtr> {
+class SelectValueWorker
+    : public AbstractQueryWorker<
+          std::shared_ptr<apache::geode::client::Cacheable>> {
  public:
-  SelectValueWorker(const RegionPtr& regionPtr,
-                    const std::string& queryPredicate, Nan::Callback* callback)
-      : AbstractQueryWorker<CacheablePtr>(regionPtr, queryPredicate, callback) {
-  }
+  SelectValueWorker(
+      const std::shared_ptr<apache::geode::client::Region>& regionPtr,
+      const std::string& queryPredicate, Nan::Callback* callback)
+      : AbstractQueryWorker<std::shared_ptr<apache::geode::client::Cacheable>>(
+            regionPtr, queryPredicate, callback) {}
 
   void ExecuteGemfireWork() {
     resultPtr = regionPtr->selectValue(queryPredicate.c_str());
@@ -754,8 +691,9 @@ class SelectValueWorker : public AbstractQueryWorker<CacheablePtr> {
 
 class ExistsValueWorker : public AbstractQueryWorker<bool> {
  public:
-  ExistsValueWorker(const RegionPtr& regionPtr,
-                    const std::string& queryPredicate, Nan::Callback* callback)
+  ExistsValueWorker(
+      const std::shared_ptr<apache::geode::client::Region>& regionPtr,
+      const std::string& queryPredicate, Nan::Callback* callback)
       : AbstractQueryWorker<bool>(regionPtr, queryPredicate, callback) {}
 
   void ExecuteGemfireWork() {
@@ -785,12 +723,12 @@ NAN_METHOD(Region::Query) {
     return;
   }
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
 
-  std::string queryPredicate(*Nan::Utf8String(info[0]));
-  Nan::Callback* callback = new Nan::Callback(info[1].As<Function>());
+  auto queryPredicate = *Nan::Utf8String(info[0]);
+  auto callback = new Nan::Callback(info[1].As<Function>());
 
-  T* worker = new T(region->regionPtr, queryPredicate, callback);
+  auto worker = new T(region->region, queryPredicate, callback);
   Nan::AsyncQueueWorker(worker);
 
   info.GetReturnValue().Set(info.Holder());
@@ -798,13 +736,12 @@ NAN_METHOD(Region::Query) {
 
 class ServerKeysWorker : public GemfireWorker {
  public:
-  ServerKeysWorker(const RegionPtr& regionPtr, Nan::Callback* callback)
+  ServerKeysWorker(
+      const std::shared_ptr<apache::geode::client::Region>& regionPtr,
+      Nan::Callback* callback)
       : GemfireWorker(callback), regionPtr(regionPtr) {}
 
-  void ExecuteGemfireWork() {
-    keysVectorPtr = new VectorOfCacheableKey();
-    regionPtr->serverKeys(*keysVectorPtr);
-  }
+  void ExecuteGemfireWork() { keysVectorPtr = regionPtr->serverKeys(); }
 
   void HandleOKCallback() {
     Local<Value> argv[2] = {Nan::Undefined(), v8Value(keysVectorPtr)};
@@ -812,8 +749,9 @@ class ServerKeysWorker : public GemfireWorker {
   }
 
  private:
-  RegionPtr regionPtr;
-  VectorOfCacheableKeyPtr keysVectorPtr;
+  std::shared_ptr<apache::geode::client::Region> regionPtr;
+  std::vector<std::shared_ptr<apache::geode::client::CacheableKey>>
+      keysVectorPtr;
 };
 
 NAN_METHOD(Region::ServerKeys) {
@@ -830,22 +768,20 @@ NAN_METHOD(Region::ServerKeys) {
     return;
   }
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  Nan::Callback* callback = new Nan::Callback(info[0].As<Function>());
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto callback = new Nan::Callback(info[0].As<Function>());
 
-  ServerKeysWorker* worker = new ServerKeysWorker(region->regionPtr, callback);
+  auto worker = new ServerKeysWorker(region->region, callback);
   Nan::AsyncQueueWorker(worker);
 }
 
 class KeysWorker : public GemfireWorker {
  public:
-  KeysWorker(const RegionPtr& regionPtr, Nan::Callback* callback)
+  KeysWorker(const std::shared_ptr<apache::geode::client::Region>& regionPtr,
+             Nan::Callback* callback)
       : GemfireWorker(callback), regionPtr(regionPtr) {}
 
-  void ExecuteGemfireWork() {
-    keysVectorPtr = new VectorOfCacheableKey();
-    regionPtr->keys(*keysVectorPtr);
-  }
+  void ExecuteGemfireWork() { regionPtr->keys(); }
 
   void HandleOKCallback() {
     Local<Value> argv[2] = {Nan::Undefined(), v8Value(keysVectorPtr)};
@@ -853,8 +789,9 @@ class KeysWorker : public GemfireWorker {
   }
 
  private:
-  RegionPtr regionPtr;
-  VectorOfCacheableKeyPtr keysVectorPtr;
+  std::shared_ptr<apache::geode::client::Region> regionPtr;
+  std::vector<std::shared_ptr<apache::geode::client::CacheableKey>>
+      keysVectorPtr;
 };
 
 NAN_METHOD(Region::Keys) {
@@ -870,19 +807,19 @@ NAN_METHOD(Region::Keys) {
     return;
   }
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  Nan::Callback* callback = new Nan::Callback(info[0].As<Function>());
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto callback = new Nan::Callback(info[0].As<Function>());
 
-  KeysWorker* worker = new KeysWorker(region->regionPtr, callback);
+  auto worker = new KeysWorker(region->region, callback);
   Nan::AsyncQueueWorker(worker);
 }
 
 NAN_METHOD(Region::RegisterAllKeys) {
   Nan::HandleScope scope;
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
   try {
-    region->regionPtr->registerAllKeys();
+    region->region->registerAllKeys();
   } catch (const apache::geode::client::Exception& exception) {
     ThrowGemfireException(exception);
   }
@@ -891,9 +828,9 @@ NAN_METHOD(Region::RegisterAllKeys) {
 NAN_METHOD(Region::UnregisterAllKeys) {
   Nan::HandleScope scope;
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
   try {
-    region->regionPtr->unregisterAllKeys();
+    region->region->unregisterAllKeys();
   } catch (const apache::geode::client::Exception& exception) {
     ThrowGemfireException(exception);
   }
@@ -901,13 +838,11 @@ NAN_METHOD(Region::UnregisterAllKeys) {
 
 class ValuesWorker : public GemfireWorker {
  public:
-  ValuesWorker(const RegionPtr& regionPtr, Nan::Callback* callback)
+  ValuesWorker(const std::shared_ptr<apache::geode::client::Region>& regionPtr,
+               Nan::Callback* callback)
       : GemfireWorker(callback), regionPtr(regionPtr) {}
 
-  void ExecuteGemfireWork() {
-    valuesVectorPtr = new VectorOfCacheable();
-    regionPtr->values(*valuesVectorPtr);
-  }
+  void ExecuteGemfireWork() { valuesVectorPtr = regionPtr->values(); }
 
   void HandleOKCallback() {
     Local<Value> argv[2] = {Nan::Undefined(), v8Value(valuesVectorPtr)};
@@ -915,8 +850,9 @@ class ValuesWorker : public GemfireWorker {
   }
 
  private:
-  RegionPtr regionPtr;
-  VectorOfCacheablePtr valuesVectorPtr;
+  std::shared_ptr<apache::geode::client::Region> regionPtr;
+  std::vector<std::shared_ptr<apache::geode::client::Cacheable>>
+      valuesVectorPtr;
 };
 
 NAN_METHOD(Region::Values) {
@@ -932,32 +868,32 @@ NAN_METHOD(Region::Values) {
     return;
   }
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  Nan::Callback* callback = new Nan::Callback(info[0].As<Function>());
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto callback = new Nan::Callback(info[0].As<Function>());
 
-  ValuesWorker* worker = new ValuesWorker(region->regionPtr, callback);
+  ValuesWorker* worker = new ValuesWorker(region->region, callback);
   Nan::AsyncQueueWorker(worker);
 }
 
 class EntriesWorker : public GemfireWorker {
  public:
-  EntriesWorker(const RegionPtr& regionPtr, Nan::Callback* callback,
-                bool recursive = true)
+  EntriesWorker(const std::shared_ptr<apache::geode::client::Region>& regionPtr,
+                Nan::Callback* callback, bool recursive = true)
       : GemfireWorker(callback), regionPtr(regionPtr), recursive(recursive) {}
 
   void ExecuteGemfireWork() {
-    regionEntryVector = new VectorOfRegionEntry();
-    regionPtr->entries(*regionEntryVector, recursive);
+    regionEntryVector = regionPtr->entries(recursive);
   }
 
   void HandleOKCallback() {
-    Local<Value> argv[2] = {Nan::Undefined(), v8Value(*regionEntryVector)};
+    Local<Value> argv[2] = {Nan::Undefined(), v8Value(regionEntryVector)};
     Nan::Call(*callback, 2, argv);
   }
 
  private:
-  RegionPtr regionPtr;
-  VectorOfRegionEntry* regionEntryVector;
+  std::shared_ptr<apache::geode::client::Region> regionPtr;
+  std::vector<std::shared_ptr<apache::geode::client::RegionEntry>>
+      regionEntryVector;
   bool recursive;
 };
 
@@ -974,10 +910,10 @@ NAN_METHOD(Region::Entries) {
     return;
   }
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
-  Nan::Callback* callback = new Nan::Callback(info[0].As<Function>());
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto callback = new Nan::Callback(info[0].As<Function>());
 
-  EntriesWorker* worker = new EntriesWorker(region->regionPtr, callback, true);
+  EntriesWorker* worker = new EntriesWorker(region->region, callback, true);
   Nan::AsyncQueueWorker(worker);
 }
 
@@ -991,9 +927,9 @@ class DestroyRegionWorker : public GemfireEventedWorker {
 
   void ExecuteGemfireWork() {
     if (local) {
-      region->regionPtr->localDestroyRegion();
+      region->region->localDestroyRegion();
     } else {
-      region->regionPtr->destroyRegion();
+      region->region->destroyRegion();
     }
   }
 
@@ -1011,9 +947,9 @@ NAN_METHOD(Region::DestroyRegion) {
     return;
   }
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
 
-  Nan::Callback* callback = getCallback(info[0]);
+  auto callback = getCallback(info[0]);
   DestroyRegionWorker* worker =
       new DestroyRegionWorker(info.Holder(), region, callback, false);
   Nan::AsyncQueueWorker(worker);
@@ -1030,9 +966,9 @@ NAN_METHOD(Region::LocalDestroyRegion) {
     return;
   }
 
-  Region* region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
+  auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
 
-  Nan::Callback* callback = getCallback(info[0]);
+  auto callback = getCallback(info[0]);
   DestroyRegionWorker* worker =
       new DestroyRegionWorker(info.Holder(), region, callback);
   Nan::AsyncQueueWorker(worker);

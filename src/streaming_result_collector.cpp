@@ -4,8 +4,10 @@ using namespace apache::geode::client;
 
 namespace node_gemfire {
 
-void StreamingResultCollector::addResult(CacheablePtr& resultPtr) {
-  resultStream->add(resultPtr);
+void StreamingResultCollector::addResult(
+    const std::shared_ptr<apache::geode::client::Cacheable>&
+        resultOfSingleExecution) {
+  resultStream->add(resultOfSingleExecution);
 }
 
 void StreamingResultCollector::endResults() { resultStream->end(); }

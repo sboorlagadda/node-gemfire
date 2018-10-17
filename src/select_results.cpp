@@ -2,8 +2,6 @@
 
 #include <sstream>
 
-#include <geode/SelectResultsIterator.hpp>
-
 #include "conversions.hpp"
 
 using namespace v8;
@@ -32,13 +30,14 @@ NAN_MODULE_INIT(SelectResults::Init) {
 }
 
 Local<Object> SelectResults::NewInstance(
-    const SelectResultsPtr& selectResultsPtr) {
+    const std::shared_ptr<apache::geode::client::SelectResults>&
+        selectResultsPtr) {
   Nan::EscapableHandleScope scope;
   const unsigned int argc = 0;
   Local<Value> argv[argc] = {};
   Local<Object> instance(
       Nan::New(SelectResults::constructor())->NewInstance(argc, argv));
-  SelectResults* selectResults = new SelectResults(selectResultsPtr);
+  auto selectResults = new SelectResults(selectResultsPtr);
   selectResults->Wrap(instance);
 
   return scope.Escape(instance);
@@ -47,14 +46,13 @@ Local<Object> SelectResults::NewInstance(
 NAN_METHOD(SelectResults::ToArray) {
   Nan::HandleScope scope;
 
-  SelectResults* selectResults =
-      Nan::ObjectWrap::Unwrap<SelectResults>(info.Holder());
-  SelectResultsPtr selectResultsPtr(selectResults->selectResultsPtr);
+  auto selectResults = Nan::ObjectWrap::Unwrap<SelectResults>(info.Holder());
+  auto selectResultsPtr = selectResults->selectResultsPtr;
 
-  unsigned int length = selectResultsPtr->size();
+  auto length = selectResultsPtr->size();
 
-  Local<Array> array(Nan::New<Array>(length));
-  for (unsigned int i = 0; i < length; i++) {
+  auto array = Nan::New<Array>(length);
+  for (decltype(length) i = 0; i < length; i++) {
     array->Set(i, v8Value((*selectResultsPtr)[i]));
   }
   info.GetReturnValue().Set(array);
@@ -69,16 +67,13 @@ NAN_METHOD(SelectResults::Each) {
     return;
   }
 
-  SelectResults* selectResults =
-      Nan::ObjectWrap::Unwrap<SelectResults>(info.Holder());
-  SelectResultsPtr selectResultsPtr(selectResults->selectResultsPtr);
+  auto selectResults = Nan::ObjectWrap::Unwrap<SelectResults>(info.Holder());
+  auto selectResultsPtr = selectResults->selectResultsPtr;
 
-  SelectResultsIterator iterator(selectResultsPtr->getIterator());
   Nan::Callback callback(Local<Function>::Cast(info[0]));
 
-  while (iterator.hasNext()) {
-    const unsigned int argc = 1;
-    Local<Value> argv[argc] = {v8Value(iterator.next())};
+  for (auto&& iterator : *selectResultsPtr) {
+    Local<Value> argv[1] = {v8Value(iterator)};
     callback(1, argv);
   }
   info.GetReturnValue().Set(info.Holder());
@@ -87,9 +82,8 @@ NAN_METHOD(SelectResults::Each) {
 NAN_METHOD(SelectResults::Inspect) {
   Nan::HandleScope scope;
 
-  SelectResults* selectResults =
-      Nan::ObjectWrap::Unwrap<SelectResults>(info.Holder());
-  SelectResultsPtr selectResultsPtr(selectResults->selectResultsPtr);
+  auto selectResults = Nan::ObjectWrap::Unwrap<SelectResults>(info.Holder());
+  auto selectResultsPtr = selectResults->selectResultsPtr;
 
   std::stringstream inspectStream;
   inspectStream << "[SelectResults size=" << selectResultsPtr->size() << "]";

@@ -12,7 +12,7 @@ target_include_directories(gemfire INTERFACE SYSTEM
     /Users/jbarrett/Develop/geode-native/build/debug/cppcache
     )
 target_link_libraries(gemfire INTERFACE
-    /Users/jbarrett/Develop/geode-native/build/debug/cppcache/src/libapache-geode.dylib
+    /Users/jbarrett/Develop/geode-native/build/debug/cppcache/shared/libapache-geode.dylib
     )
 
 

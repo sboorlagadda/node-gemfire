@@ -9,97 +9,110 @@
 #include <string>
 
 #include <geode/CacheFactory.hpp>
+#include <geode/CacheableBuiltins.hpp>
 #include <geode/PdxInstanceFactory.hpp>
+#include <geode/RegionEntry.hpp>
+#include <geode/Struct.hpp>
 
 namespace node_gemfire {
 
-apache::geode::client::CacheablePtr gemfireValue(
+std::shared_ptr<apache::geode::client::Cacheable> gemfireValue(
     const v8::Local<v8::Value>& v8Value,
-    const apache::geode::client::CachePtr& cachePtr);
-apache::geode::client::PdxInstancePtr gemfireValue(
+    apache::geode::client::Cache& cachePtr);
+std::shared_ptr<apache::geode::client::PdxInstance> gemfireValue(
     const v8::Local<v8::Object>& v8Object,
-    const apache::geode::client::CachePtr& cachePtr);
-apache::geode::client::CacheableArrayListPtr gemfireValue(
+    apache::geode::client::Cache& cachePtr);
+std::shared_ptr<apache::geode::client::CacheableArrayList> gemfireValue(
     const v8::Local<v8::Array>& v8Value,
-    const apache::geode::client::CachePtr& cachePtr);
-apache::geode::client::CacheableDatePtr gemfireValue(
+    apache::geode::client::Cache& cachePtr);
+std::shared_ptr<apache::geode::client::CacheableDate> gemfireValue(
     const v8::Local<v8::Date>& v8Value);
 
-apache::geode::client::CacheableKeyPtr gemfireKey(
+std::shared_ptr<apache::geode::client::CacheableKey> gemfireKey(
     const v8::Local<v8::Value>& v8Value,
-    const apache::geode::client::CachePtr& cachePtr);
-apache::geode::client::VectorOfCacheableKeyPtr gemfireKeys(
+    apache::geode::client::Cache& cachePtr);
+std::vector<std::shared_ptr<apache::geode::client::CacheableKey>> gemfireKeys(
     const v8::Local<v8::Array>& v8Value,
-    const apache::geode::client::CachePtr& cachePtr);
+    apache::geode::client::Cache& cachePtr);
 
-apache::geode::client::HashMapOfCacheablePtr gemfireHashMap(
+apache::geode::client::HashMapOfCacheable gemfireHashMap(
     const v8::Local<v8::Object>& v8Object,
-    const apache::geode::client::CachePtr& cachePtr);
-apache::geode::client::CacheableVectorPtr gemfireVector(
+    apache::geode::client::Cache& cachePtr);
+std::shared_ptr<apache::geode::client::CacheableVector> gemfireVector(
     const v8::Local<v8::Array>& v8Array,
-    const apache::geode::client::CachePtr& cachePtr);
+    apache::geode::client::Cache& cachePtr);
 
 v8::Local<v8::Value> v8Value(
-    const apache::geode::client::CacheablePtr& valuePtr);
+    const std::shared_ptr<apache::geode::client::Cacheable>& valuePtr);
 v8::Local<v8::Value> v8Value(
-    const apache::geode::client::CacheableKeyPtr& keyPtr);
+    const std::shared_ptr<apache::geode::client::CacheableKey>& keyPtr);
 v8::Local<v8::Value> v8Value(
-    const apache::geode::client::CacheableInt64Ptr& valuePtr);
+    const std::shared_ptr<apache::geode::client::CacheableInt64>& valuePtr);
 v8::Local<v8::Object> v8Value(
-    const apache::geode::client::StructPtr& structPtr);
+    const std::shared_ptr<apache::geode::client::Struct>& structPtr);
 v8::Local<v8::Value> v8Value(
-    const apache::geode::client::PdxInstancePtr& pdxInstancePtr);
+    const std::shared_ptr<apache::geode::client::PdxInstance>& pdxInstancePtr);
 v8::Local<v8::Object> v8Value(
-    const apache::geode::client::SelectResultsPtr& selectResultsPtr);
+    const std::shared_ptr<apache::geode::client::SelectResults>&
+        selectResultsPtr);
 v8::Local<v8::Object> v8Value(
-    const apache::geode::client::CacheableHashMapPtr& hashMapPtr);
+    const std::shared_ptr<apache::geode::client::CacheableHashMap>& hashMapPtr);
 v8::Local<v8::Object> v8Value(
-    const apache::geode::client::HashMapOfCacheablePtr& hashMapPtr);
+    const apache::geode::client::HashMapOfCacheable& hashMapPtr);
 v8::Local<v8::Object> v8Value(
-    const apache::geode::client::RegionEntryPtr& regionEntryPtr);
+    const std::shared_ptr<apache::geode::client::RegionEntry>& regionEntryPtr);
 v8::Local<v8::Array> v8Value(
-    const apache::geode::client::VectorOfCacheablePtr& vectorPtr);
+    const std::vector<std::shared_ptr<apache::geode::client::Cacheable>>&
+        vectorPtr);
 v8::Local<v8::Array> v8Value(
-    const apache::geode::client::VectorOfCacheableKeyPtr& vectorPtr);
+    const std::vector<std::shared_ptr<apache::geode::client::CacheableKey>>&
+        vectorPtr);
 v8::Local<v8::Array> v8Value(
-    const apache::geode::client::VectorOfRegionEntry& vectorPtr);
+    const std::vector<std::shared_ptr<apache::geode::client::RegionEntry>>&
+        vectorPtr);
 v8::Local<v8::Date> v8Value(
-    const apache::geode::client::CacheableDatePtr& datePtr);
+    const std::shared_ptr<apache::geode::client::CacheableDate>& datePtr);
 v8::Local<v8::Boolean> v8Value(bool value);
 
 template <typename T>
-v8::Local<v8::Array> v8Array(
-    const apache::geode::client::SharedPtr<T>& iterablePtr) {
+v8::Local<v8::Array> v8Array(const T& iterable) {
   Nan::EscapableHandleScope scope;
 
-  unsigned int length = iterablePtr->size();
-  v8::Local<v8::Array> v8Array(Nan::New<v8::Array>(length));
+  auto length = iterable.size();
+  auto v8Array = Nan::New<v8::Array>(length);
 
-  unsigned int i = 0;
-  for (typename T::Iterator iterator(iterablePtr->begin());
-       iterator != iterablePtr->end(); ++iterator) {
-    v8Array->Set(i, v8Value(*iterator));
+  decltype(length) i = 0;
+  for (auto&& iterator : iterable) {
+    v8Array->Set(i, v8Value(iterator));
     i++;
   }
 
   return scope.Escape(v8Array);
 }
 
-template <typename T>
-v8::Local<v8::Object> v8Object(
-    const apache::geode::client::SharedPtr<T>& hashMapPtr) {
+template <typename... T>
+v8::Local<v8::Object> v8Object(const std::unordered_map<T...>& hashMap) {
   Nan::EscapableHandleScope scope;
-  v8::Local<v8::Object> v8Object(Nan::New<v8::Object>());
+  auto v8Object = Nan::New<v8::Object>();
 
-  for (typename T::Iterator iterator = hashMapPtr->begin();
-       iterator != hashMapPtr->end(); iterator++) {
-    apache::geode::client::CacheablePtr keyPtr(iterator.first());
-    apache::geode::client::CacheablePtr valuePtr(iterator.second());
+  for (auto&& iterator : hashMap) {
+    auto&& key = iterator.first;
+    auto&& value = iterator.second;
 
-    v8Object->Set(v8Value(keyPtr), v8Value(valuePtr));
+    v8Object->Set(v8Value(key), v8Value(value));
   }
 
   return scope.Escape(v8Object);
+}
+
+template <typename T>
+v8::Local<v8::Array> v8Array(const std::shared_ptr<T>& iterable) {
+  return v8Array(*iterable);
+}
+
+template <typename T>
+v8::Local<v8::Object> v8Object(const std::shared_ptr<T>& hashMap) {
+  return v8Object(*hashMap);
 }
 
 std::string getClassName(const v8::Local<v8::Object>& v8Object);

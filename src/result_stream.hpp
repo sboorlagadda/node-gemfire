@@ -31,11 +31,11 @@ class ResultStream {
     uv_cond_destroy(&resultsProcessedCond);
   }
 
-  void add(const apache::geode::client::CacheablePtr &resultPtr);
+  void add(const std::shared_ptr<apache::geode::client::Cacheable> &resultPtr);
   void end();
   void resultsProcessed();
 
-  apache::geode::client::CacheableVectorPtr nextResults();
+  std::shared_ptr<apache::geode::client::CacheableVector> nextResults();
 
  private:
   static void deleteHandle(uv_handle_t *handle);
@@ -48,7 +48,7 @@ class ResultStream {
 
   uv_cond_t resultsProcessedCond;
 
-  apache::geode::client::CacheableVectorPtr resultsPtr;
+  std::shared_ptr<apache::geode::client::CacheableVector> resultsPtr;
 };
 
 }  // namespace node_gemfire

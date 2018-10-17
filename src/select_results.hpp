@@ -11,8 +11,9 @@ namespace node_gemfire {
 
 class SelectResults : public Nan::ObjectWrap {
  public:
-  explicit SelectResults(std::shared_ptr<apache::geode::client::SelectResults> selectResultsPtr) :
-    selectResultsPtr(selectResultsPtr) {}
+  explicit SelectResults(
+      std::shared_ptr<apache::geode::client::SelectResults> selectResultsPtr)
+      : selectResultsPtr(selectResultsPtr) {}
 
   static NAN_MODULE_INIT(Init);
 
@@ -21,10 +22,11 @@ class SelectResults : public Nan::ObjectWrap {
   static NAN_METHOD(Inspect);
 
   static v8::Local<v8::Object> NewInstance(
-      const apache::geode::client::SelectResultsPtr& selectResultsPtr);
+      const std::shared_ptr<apache::geode::client::SelectResults>&
+          selectResultsPtr);
 
  private:
-  apache::geode::client::SelectResultsPtr selectResultsPtr;
+  std::shared_ptr<apache::geode::client::SelectResults> selectResultsPtr;
   static inline Nan::Persistent<v8::Function>& constructor() {
     static Nan::Persistent<v8::Function> my_constructor;
     return my_constructor;

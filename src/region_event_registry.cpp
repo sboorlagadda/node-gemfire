@@ -13,10 +13,9 @@ using namespace apache::geode::client;
 namespace node_gemfire {
 
 void RegionEventRegistry::add(node_gemfire::Region *region) {
-  assert(region->regionPtr != NULLPTR);
+  assert(region->region != nullptr);
 
-  AttributesMutatorPtr attrMutatorPtr(
-      region->regionPtr->getAttributesMutator());
+  auto attrMutatorPtr = region->region->getAttributesMutator();
   attrMutatorPtr->setCacheListener(listener);
 
   regionSet.insert(region);
@@ -50,11 +49,9 @@ void RegionEventRegistry::publishEvents() {
     EventStream::Event *event(*iterator);
     Local<Object> eventPayload(event->v8Object());
 
-    for (std::set<Region *>::iterator iterator(regionSet.begin());
-         iterator != regionSet.end(); ++iterator) {
-      Region *region(*iterator);
-      Local<Object> regionObject(region->handle());
-      if (region->regionPtr == event->getRegion()) {
+    for (auto &&region : regionSet) {
+      auto regionObject = region->handle();
+      if (region->region == event->getRegion()) {
         emitEvent(regionObject, event->getName().c_str(), eventPayload);
       }
     }
