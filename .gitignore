@@ -41,3 +41,4 @@ spec/support/java/function/.classpath
 vf.gf.*
 
 benchmark/cpp/benchmark
+cmake-build-debug
