@@ -65,7 +65,7 @@
   },
   "dependencies": {
     "events": "^2.0.0",
-    "nan": "^2.10.0",
+    "nan": "^2.11.1",
     "node-gyp": "^3.6.2",
     "node-pre-gyp": "^0.10.3",
     "path": "^0.12.7",
