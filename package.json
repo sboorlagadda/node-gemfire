@@ -72,13 +72,14 @@
     "process": "^0.11.10"
   },
   "scripts": {
-    "install": "node-pre-gyp install --fallback-to-build",
-    "test": "grunt rebuild test"
+    "install": "cmake-js compile",
+    "build": "cmake-js build"
   },
   "devDependencies": {
     "@mapbox/cmake-node-module": "^1.1.0",
     "async": "^2.6.0",
     "aws-sdk": "^2.332.0",
+    "cmake-js": "^4.0.1",
     "grunt": "^1.0.2",
     "grunt-contrib-jshint": "^1.1.0",
     "grunt-newer": "^1.3.0",
