@@ -36,7 +36,7 @@ Local<Object> SelectResults::NewInstance(
   const unsigned int argc = 0;
   Local<Value> argv[argc] = {};
   Local<Object> instance(
-      Nan::New(SelectResults::constructor())->NewInstance(argc, argv));
+      Nan::New(SelectResults::constructor())->NewInstance(Isolate::GetCurrent()->GetCurrentContext(), argc, argv).FromMaybe(Local<Object>()));
   auto selectResults = new SelectResults(selectResultsPtr);
   selectResults->Wrap(instance);
 

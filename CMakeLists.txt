@@ -8,11 +8,10 @@ set(CMAKE_CXX_STANDARD 11)
 
 add_library(gemfire INTERFACE)
 target_include_directories(gemfire INTERFACE SYSTEM
-    /Users/jbarrett/Develop/geode-native/cppcache/include
-    /Users/jbarrett/Develop/geode-native/build/debug/cppcache
+        /Users/sboorlagadda/workspace/geode-native/install/include
     )
 target_link_libraries(gemfire INTERFACE
-    /Users/jbarrett/Develop/geode-native/build/debug/cppcache/shared/libapache-geode.dylib
+        /Users/sboorlagadda/workspace/geode-native/install/lib/libapache-geode.dylib
     )
 
 

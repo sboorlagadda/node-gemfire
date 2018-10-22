@@ -40,7 +40,7 @@ v8::Local<v8::Object> Region::NewInstance(
   const unsigned int argc = 0;
   Local<Value> argv[argc] = {};
   Local<Object> instance(
-      Nan::New(Region::constructor())->NewInstance(argc, argv));
+      Nan::New(Region::constructor())->NewInstance(Isolate::GetCurrent()->GetCurrentContext(), argc, argv).FromMaybe(Local<Object>()));
   Region* region = new Region(regionPtr);
   RegionEventRegistry::getInstance()->add(region);
   region->Wrap(instance);
@@ -106,7 +106,7 @@ NAN_METHOD(Region::Clear) {
 std::string unableToPutValueError(Local<Value> v8Value) {
   std::stringstream errorMessageStream;
   errorMessageStream << "Unable to put value "
-                     << *String::Utf8Value(v8Value->ToDetailString());
+                     << *String::Utf8Value(v8Value->ToDetailString(Isolate::GetCurrent()->GetCurrentContext()).FromMaybe(Local<String>()));
   return errorMessageStream.str();
 }
 
