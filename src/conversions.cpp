@@ -131,7 +131,7 @@ std::shared_ptr<apache::geode::client::Cacheable> gemfireValue(
         v8Value->ToBoolean()->Value());
   } else if (v8Value->IsNumber() || v8Value->IsNumberObject()) {
     return apache::geode::client::CacheableDouble::create(
-        v8Value->ToNumber(Isolate::GetCurrent()->GetCurrentContext()).FromMaybe(Local<Number>())->Value());
+        v8Value->ToNumber()->Value());
   } else if (v8Value->IsDate()) {
     return gemfireValue(Local<Date>::Cast(v8Value));
   } else if (v8Value->IsArray()) {
@@ -157,7 +157,7 @@ std::shared_ptr<apache::geode::client::Cacheable> gemfireValue(
   } else {
     std::string errorMessage(
         "Unable to serialize to GemFire; unknown JavaScript object: ");
-    errorMessage.append(*Nan::Utf8String(v8Value->ToDetailString(Isolate::GetCurrent()->GetCurrentContext()).FromMaybe(Local<String>())));
+    errorMessage.append(*Nan::Utf8String(v8Value->ToDetailString()));
     Nan::ThrowError(errorMessage.c_str());
     return nullptr;
   }

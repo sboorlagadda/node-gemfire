@@ -251,7 +251,7 @@ Local<Value> executeFunction(Nan::NAN_METHOD_ARGS_TYPE info,
         Nan::New(dependencies)
             ->Get(Nan::New("EventEmitter").ToLocalChecked())
             .As<Function>());
-    Local<Object> eventEmitter(eventEmitterConstructor->NewInstance(Isolate::GetCurrent()->GetCurrentContext()).FromMaybe(Local<Object>()));
+    Local<Object> eventEmitter(eventEmitterConstructor->NewInstance());
 
     ExecuteFunctionWorker *worker = new ExecuteFunctionWorker(
         std::move(executionPtr), functionName, functionArguments,

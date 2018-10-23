@@ -40,7 +40,7 @@ v8::Local<v8::Object> Region::NewInstance(
   const unsigned int argc = 0;
   Local<Value> argv[argc] = {};
   Local<Object> instance(
-      Nan::New(Region::constructor())->NewInstance(Isolate::GetCurrent()->GetCurrentContext(), argc, argv).FromMaybe(Local<Object>()));
+      Nan::New(Region::constructor())->NewInstance(argc, argv));
   Region* region = new Region(regionPtr);
   RegionEventRegistry::getInstance()->add(region);
   region->Wrap(instance);
@@ -106,7 +106,7 @@ NAN_METHOD(Region::Clear) {
 std::string unableToPutValueError(Local<Value> v8Value) {
   std::stringstream errorMessageStream;
   errorMessageStream << "Unable to put value "
-                     << *String::Utf8Value(v8Value->ToDetailString(Isolate::GetCurrent()->GetCurrentContext()).FromMaybe(Local<String>()));
+                     << *String::Utf8Value(v8Value->ToDetailString());
   return errorMessageStream.str();
 }
 
@@ -163,6 +163,12 @@ NAN_METHOD(Region::Put) {
   auto region = Nan::ObjectWrap::Unwrap<Region>(info.Holder());
 
   auto& cache = region->region->getCache();
+
+  if (cache.isClosed()) {
+      std::string msg = "Region name " + region->region->getName() + " is invalid because the Cache is Closed.";
+      Nan::ThrowError(msg.c_str());
+      return;
+  }
 
   std::shared_ptr<apache::geode::client::CacheableKey> keyPtr(
       gemfireKey(info[0], cache));

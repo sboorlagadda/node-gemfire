@@ -37,7 +37,7 @@ class Cache : public Nan::ObjectWrap {
   static NAN_METHOD(Inspect);
 
  private:
-  static std::shared_ptr<apache::geode::client::Pool> getPool(
+  std::shared_ptr<apache::geode::client::Pool> getPool(
       const v8::Handle<v8::Value>& poolNameValue);
   static v8::Local<v8::Function> exitCallback();
 

@@ -11,6 +11,7 @@
 #include <geode/CacheFactory.hpp>
 #include <geode/Execution.hpp>
 #include <geode/FunctionService.hpp>
+#include <geode/PoolManager.hpp>
 #include <geode/Query.hpp>
 #include <geode/QueryService.hpp>
 #include <geode/Region.hpp>
@@ -176,7 +177,7 @@ NAN_METHOD(Cache::ExecuteQuery) {
       queryService = cache->getQueryService();
     } else {
       std::string poolName(*Nan::Utf8String(poolNameValue));
-      auto pool = getPool(poolNameValue);
+      auto pool = Nan::ObjectWrap::Unwrap<Cache>(info.This())->getPool(poolNameValue);
 
       if (pool == nullptr) {
         auto poolName = *Nan::Utf8String(poolNameValue);
@@ -288,28 +289,37 @@ NAN_METHOD(Cache::GetRegion) {
   }
 
   auto cache = Nan::ObjectWrap::Unwrap<Cache>(info.This())->cache;
-  auto region = cache->getRegion(*Nan::Utf8String(info[0]));
+    try {
+        auto region = cache->getRegion(*Nan::Utf8String(info[0]));
 
-  if (region == nullptr) {
-    info.GetReturnValue().Set(Nan::Undefined());
-  } else {
-    info.GetReturnValue().Set(Region::NewInstance(region));
-  }
+        if (region == nullptr) {
+            info.GetReturnValue().Set(Nan::Undefined());
+        } else {
+            info.GetReturnValue().Set(Region::NewInstance(region));
+        }
+    }
+    catch (apache::geode::client::CacheClosedException) {
+        info.GetReturnValue().Set(Nan::Undefined());
+    }
 }
 
 NAN_METHOD(Cache::RootRegions) {
   Nan::HandleScope scope;
 
-  auto cache = Nan::ObjectWrap::Unwrap<Cache>(info.This())->cache;
-  auto regions = cache->rootRegions();
-  auto size = regions.size();
-  auto rootRegions = Nan::New<Array>(size);
+    try {
+        auto cache = Nan::ObjectWrap::Unwrap<Cache>(info.This())->cache;
+        auto regions = cache->rootRegions();
+        auto size = regions.size();
+        auto rootRegions = Nan::New<Array>(size);
 
-  for (decltype(size) i = 0; i < size; i++) {
-    rootRegions->Set(i, Region::NewInstance(regions[i]));
-  }
-
-  info.GetReturnValue().Set(rootRegions);
+        for (decltype(size) i = 0; i < size; i++) {
+            rootRegions->Set(i, Region::NewInstance(regions[i]));
+        }
+        info.GetReturnValue().Set(rootRegions);
+    }
+    catch (apache::geode::client::CacheClosedException) {
+        info.GetReturnValue().Set( Nan::New<Array>(0));
+    }
 }
 
 NAN_METHOD(Cache::Inspect) {
@@ -340,7 +350,7 @@ NAN_METHOD(Cache::ExecuteFunction) {
   }
 
   try {
-    auto pool = getPool(poolNameValue);
+    auto pool = Nan::ObjectWrap::Unwrap<Cache>(info.This())->getPool(poolNameValue);
 
     if (pool == nullptr) {
       auto poolName = *Nan::Utf8String(poolNameValue);
@@ -356,6 +366,28 @@ NAN_METHOD(Cache::ExecuteFunction) {
   } catch (const apache::geode::client::Exception& exception) {
     ThrowGemfireException(exception);
   }
+}
+
+std::shared_ptr<apache::geode::client::Pool> Cache::getPool(const Handle<Value> & poolNameValue) {
+    if (!poolNameValue->IsUndefined()) {
+        std::string poolName(*Nan::Utf8String(poolNameValue));
+        return cache->getPoolManager().find(poolName.c_str());
+    } else {
+        // FIXME: Workaround for the situation where there are no regions yet.
+        //
+        // As of GemFire Native Client 8.0.0.0, if no regions have ever been present, it's possible that
+        // the cachePtr has no default pool set. Attempting to execute a function on this cachePtr will
+        // throw a NullPointerException.
+        //
+        // To avoid this problem, we grab the first pool we can find and execute the function on that
+        // pool's poolPtr instead of on the cachePtr. Note that this might not be the best choice of
+        // poolPtr at the moment.
+        //
+        // See https://www.pivotaltracker.com/story/show/82079194 for the original bug.
+        apache::geode::client::HashMapOfPools hashMapOfPools(cache->getPoolManager().getAll());
+        apache::geode::client::HashMapOfPools::iterator iterator(hashMapOfPools.begin());
+        return iterator->second;
+    }
 }
 
 }  // namespace node_gemfire

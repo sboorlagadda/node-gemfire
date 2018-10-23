@@ -32,51 +32,51 @@ NAN_MODULE_INIT(CacheFactory::Init) {
 
   constructorTemplate->InstanceTemplate()->SetInternalFieldCount(1);
 
-  Nan::SetPrototypeMethod(constructorTemplate, "addLocator",
-                          CacheFactory::AddLocator);
-  Nan::SetPrototypeMethod(constructorTemplate, "addServer",
-                          CacheFactory::AddServer);
+//  Nan::SetPrototypeMethod(constructorTemplate, "addLocator",
+//                          CacheFactory::AddLocator);
+//  Nan::SetPrototypeMethod(constructorTemplate, "addServer",
+//                          CacheFactory::AddServer);
   Nan::SetPrototypeMethod(constructorTemplate, "create", CacheFactory::Create);
   Nan::SetPrototypeMethod(constructorTemplate, "set", CacheFactory::Set);
-  Nan::SetPrototypeMethod(constructorTemplate, "setFreeConnectionTimeout",
-                          CacheFactory::SetFreeConnectionTimeout);
-  Nan::SetPrototypeMethod(constructorTemplate, "setIdleTimeout",
-                          CacheFactory::SetIdleTimeout);
-  Nan::SetPrototypeMethod(constructorTemplate, "setLoadConditioningInterval",
-                          CacheFactory::SetLoadConditioningInterval);
-  Nan::SetPrototypeMethod(constructorTemplate, "setMaxConnections",
-                          CacheFactory::SetMaxConnections);
-  Nan::SetPrototypeMethod(constructorTemplate, "setMinConnections",
-                          CacheFactory::SetMinConnections);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setFreeConnectionTimeout",
+//                          CacheFactory::SetFreeConnectionTimeout);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setIdleTimeout",
+//                          CacheFactory::SetIdleTimeout);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setLoadConditioningInterval",
+//                          CacheFactory::SetLoadConditioningInterval);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setMaxConnections",
+//                          CacheFactory::SetMaxConnections);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setMinConnections",
+//                          CacheFactory::SetMinConnections);
   Nan::SetPrototypeMethod(constructorTemplate, "setPdxIgnoreUnreadFields",
                           CacheFactory::SetPdxIgnoreUnreadFields);
-  Nan::SetPrototypeMethod(constructorTemplate, "setPingInterval",
-                          CacheFactory::SetPingInterval);
-  Nan::SetPrototypeMethod(constructorTemplate, "setPRSingleHopEnabled",
-                          CacheFactory::SetPRSingleHopEnabled);
-  Nan::SetPrototypeMethod(constructorTemplate, "setReadTimeout",
-                          CacheFactory::SetReadTimeout);
-  Nan::SetPrototypeMethod(constructorTemplate, "setRetryAttempts",
-                          CacheFactory::SetRetryAttempts);
-  Nan::SetPrototypeMethod(constructorTemplate, "setServerGroup",
-                          CacheFactory::SetServerGroup);
-  Nan::SetPrototypeMethod(constructorTemplate, "setSocketBufferSize",
-                          CacheFactory::SetSocketBufferSize);
-  Nan::SetPrototypeMethod(constructorTemplate, "setStatisticInterval",
-                          CacheFactory::SetStatisticInterval);
-  Nan::SetPrototypeMethod(constructorTemplate, "setSubscriptionAckInterval",
-                          CacheFactory::SetSubscriptionAckInterval);
-  Nan::SetPrototypeMethod(constructorTemplate, "setSubscriptionEnabled",
-                          CacheFactory::SetSubscriptionEnabled);
-  Nan::SetPrototypeMethod(constructorTemplate,
-                          "setSubscriptionMessageTrackingTimeout",
-                          CacheFactory::SetSubscriptionMessageTrackingTimeout);
-  Nan::SetPrototypeMethod(constructorTemplate, "setSubscriptionRedundancy",
-                          CacheFactory::SetSubscriptionRedundancy);
-  Nan::SetPrototypeMethod(constructorTemplate, "setThreadLocalConnections",
-                          CacheFactory::SetThreadLocalConnections);
-  Nan::SetPrototypeMethod(constructorTemplate, "setUpdateLocatorListInterval",
-                          CacheFactory::SetUpdateLocatorListInterval);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setPingInterval",
+//                          CacheFactory::SetPingInterval);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setPRSingleHopEnabled",
+//                          CacheFactory::SetPRSingleHopEnabled);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setReadTimeout",
+//                          CacheFactory::SetReadTimeout);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setRetryAttempts",
+//                          CacheFactory::SetRetryAttempts);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setServerGroup",
+//                          CacheFactory::SetServerGroup);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setSocketBufferSize",
+//                          CacheFactory::SetSocketBufferSize);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setStatisticInterval",
+//                          CacheFactory::SetStatisticInterval);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setSubscriptionAckInterval",
+//                          CacheFactory::SetSubscriptionAckInterval);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setSubscriptionEnabled",
+//                          CacheFactory::SetSubscriptionEnabled);
+//  Nan::SetPrototypeMethod(constructorTemplate,
+//                          "setSubscriptionMessageTrackingTimeout",
+//                          CacheFactory::SetSubscriptionMessageTrackingTimeout);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setSubscriptionRedundancy",
+//                          CacheFactory::SetSubscriptionRedundancy);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setThreadLocalConnections",
+//                          CacheFactory::SetThreadLocalConnections);
+//  Nan::SetPrototypeMethod(constructorTemplate, "setUpdateLocatorListInterval",
+//                          CacheFactory::SetUpdateLocatorListInterval);
 
   constructor().Reset(Nan::GetFunction(constructorTemplate).ToLocalChecked());
 

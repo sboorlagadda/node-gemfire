@@ -1,10 +1,10 @@
 const _ = require("lodash");
 
 module.exports = function(grunt) {
-  var startServer = 'cd tmp/gemfire && gfsh run --file /vagrant/bin/startServer.gfsh';
+  var startServer = 'cd tmp/gemfire && gfsh run --file /Users/sboorlagadda/workspace/node-gemfire/bin/startServer.gfsh';
   var ensureServerRunning = 'test -e tmp/gemfire/server/vf.gf.server.pid && ps ax | grep `cat tmp/gemfire/server/vf.gf.server.pid` | grep -qv grep && echo "Server already running..." || (' + startServer + ')';
 
-  var startLocator = 'cd tmp/gemfire && gfsh run --file /vagrant/bin/startLocator.gfsh';
+  var startLocator = 'cd tmp/gemfire && gfsh run --file /Users/sboorlagadda/workspace/node-gemfire/bin/startLocator.gfsh';
   var ensureLocatorRunning = 'test -e tmp/gemfire/locator/vf.gf.locator.pid && ps ax | grep `cat tmp/gemfire/locator/vf.gf.locator.pid` | grep -qv grep && echo "Locator already running..." || (' + startLocator + ')';
 
   var nodeCommand = "node";
@@ -46,7 +46,7 @@ module.exports = function(grunt) {
           command: startServer
         },
         stopServer: {
-          command: 'cd tmp/gemfire && gfsh run --file /vagrant/bin/stopServer.gfsh'
+          command: 'cd tmp/gemfire && gfsh run --file /Users/sboorlagadda/workspace/node-gemfire/bin/stopServer.gfsh'
         },
         ensureLocatorRunning: {
           command: ensureLocatorRunning
@@ -55,10 +55,10 @@ module.exports = function(grunt) {
           command: startLocator
         },
         stopLocator: {
-          command: 'cd tmp/gemfire && gfsh run --file /vagrant/bin/stopLocator.gfsh'
+          command: 'cd tmp/gemfire && gfsh run --file /Users/sboorlagadda/workspace/node-gemfire/bin/stopLocator.gfsh'
         },
 		shutdown: {
-		  command: 'cd tmp/gemfire && gfsh run --file /vagrant/bin/shutdown.gfsh'
+		  command: 'cd tmp/gemfire && gfsh run --file /Users/sboorlagadda/workspace/node-gemfire/bin/shutdown.gfsh'
 		},
         buildTestFunction: {
           command: 'cd spec/support/java/function/ && ./gradlew build',
@@ -68,7 +68,7 @@ module.exports = function(grunt) {
           ]
         },
         deployTestFunction: {
-          command: 'cd tmp/gemfire && gfsh run --file /vagrant/bin/deployTestFunction.gfsh',
+          command: 'cd tmp/gemfire && gfsh run --file /Users/sboorlagadda/workspace/node-gemfire/bin/deployTestFunction.gfsh',
           src: [
             'tmp/gemfire/server/vf.gf.server.pid',
             'spec/support/java/function/build/libs/function.jar'
@@ -121,7 +121,7 @@ module.exports = function(grunt) {
   /* TODO the cpp unit tests and the npm install <git repo> are at confilict.   
      The workaround in the old version of gyp doesn't work any more.  For now
      the cpp unit tests will be skipped. */
-  grunt.registerTask('test', ['build', /*'shell:cppUnitTests',*/ 'server:ensure', 'server:deploy', 'shell:jasmine', 'locator:shutdown']);
+  grunt.registerTask('test', [/*'shell:cppUnitTests',*/ 'server:ensure', 'server:deploy', 'shell:jasmine', 'locator:shutdown']);
   grunt.registerTask('lint', ['shell:lint', 'jshint']);
   grunt.registerTask('console', ['build', 'shell:console']);
   grunt.registerTask('license_finder', ['shell:licenseFinder']);
